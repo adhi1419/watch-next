@@ -69,7 +69,7 @@ export async function getTitleDetail(titleId: string) {
 
   // Get tracking state
   const trackingRow = queries.getTracking.get(titleId) as { titleId: string } | null;
-  const totalEpisodes = meta.type === "MOVIE" ? 1 : seasons.reduce((sum, s) => sum + s.episodes.length, 0);
+  const totalEpisodes = meta.type === "MOVIE" ? 1 : meta.totalEpisodes;
   const watchedCount = watchedEps.length;
 
   // Watchlist check
