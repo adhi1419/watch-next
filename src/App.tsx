@@ -1,20 +1,26 @@
 import { useState, useEffect } from "react";
 import { Router } from "wouter";
-import { SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal, LogOut } from "lucide-react";
 import DiscoverView from "./DiscoverView";
 import HistoryView from "./HistoryView";
 import { GENRE_MAP } from "./components/constants";
 import { useUrlState } from "./hooks/useUrlState";
+import { useAuth, LoginScreen } from "./components/AuthGate";
 
 export default function App() {
+  const { user, loading, signIn, signOut } = useAuth();
+
+  if (loading) return <div className="flex items-center justify-center h-screen text-[var(--color-muted)]">Loading...</div>;
+  if (!user) return <LoginScreen onSignIn={signIn} />;
+
   return (
     <Router>
-      <AppShell />
+      <AppShell user={user} onSignOut={signOut} />
     </Router>
   );
 }
 
-function AppShell() {
+function AppShell({ user, onSignOut }: { user: any; onSignOut: () => void }) {
   const { view, filterType, sort, genres, push } = useUrlState();
   const [showFilters, setShowFilters] = useState(false);
   const [activeActor, setActiveActor] = useState<string | null>(null);
@@ -77,6 +83,10 @@ function AppShell() {
           <button className={`relative z-1 px-4 py-1.5 border-none bg-transparent text-sm font-medium cursor-pointer rounded-full transition-colors flex-1 text-center leading-tight ${filterType === "SHOW" ? "text-white" : "text-[var(--color-muted)]"}`} onClick={() => push({ filterType: "SHOW" })}>TV Shows</button>
           <button className={`relative z-1 px-4 py-1.5 border-none bg-transparent text-sm font-medium cursor-pointer rounded-full transition-colors flex-1 text-center leading-tight ${filterType === "MOVIE" ? "text-white" : "text-[var(--color-muted)]"}`} onClick={() => push({ filterType: "MOVIE" })}>Movies</button>
         </div>
+        <button onClick={onSignOut} className="ml-3 shrink-0 flex items-center gap-2 bg-transparent border-none cursor-pointer text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors" title="Sign out">
+          {user.photoURL && <img src={user.photoURL} alt="" className="w-7 h-7 rounded-full" />}
+          <LogOut size={16} />
+        </button>
       </nav>
 
       {/* Main Content */}
