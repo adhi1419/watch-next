@@ -16,7 +16,6 @@ interface TitleCardProps {
   isStopped?: boolean;
   isSelected?: boolean;
   progress?: { watched: number; total: number };
-  statusBadge?: string;
   isPinned?: boolean;
   providers?: string[];
   onClick?: () => void;

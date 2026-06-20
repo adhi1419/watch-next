@@ -9,7 +9,6 @@ import CatalogGrid from "./components/CatalogGrid";
 import DetailPanel from "./components/DetailPanel";
 import { GENRE_MAP } from "./components/constants";
 
-export { GENRE_MAP };
 
 type SortKey = "IMDB_SCORE" | "POPULAR";
 type FilterType = "MOVIE" | "SHOW";

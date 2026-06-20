@@ -38,7 +38,7 @@ A personal streaming discovery and tracking app that surfaces high-quality title
 |--------|---------------|
 | `index.ts` | HTTP server, route dispatch, error handling. Dev/prod mode via `NODE_ENV` |
 | `db.ts` | SQLite connection, schema migrations (`pragma user_version`), prepared statements |
-| `justwatch.ts` | JustWatch GraphQL client with 5-min in-memory TTL cache |
+| `justwatch.ts` | Catalog provider: GraphQL client, multi-platform config, 5-min cache |
 | `status.ts` | `deriveStatus()` logic + `enrichEntries()` batch enrichment (no N+1) |
 | `validate.ts` | Safe JSON parsing, `requireFields()`, `ValidationError` class |
 | `routes/tracking.ts` | CRUD for tracking + episodes + stop/resume |
@@ -49,15 +49,24 @@ A personal streaming discovery and tracking app that surfaces high-quality title
 
 | Module | Responsibility |
 |--------|---------------|
-| `App.tsx` | Shell: topbar, search, filters, TV/Movie toggle, tab routing |
-| `DiscoverView.tsx` | Composes Carousel + CatalogGrid + DetailPanel (~130 lines) |
-| `HistoryView.tsx` | Completed/stopped grid with panel |
-| `context/TrackingContext.tsx` | Provider wrapping `useTrackingState` — eliminates prop drilling |
-| `hooks/useTrackingState.ts` | Core tracking state: IDs, episode progress, season loading |
-| `hooks/useDiscover.ts` | Pagination, debounce, dedup filtering |
-| `hooks/useWatchlist.ts` | Watchlist state + toggle |
+| `App.tsx` | Shell: topbar, search, filters, TV/Movie toggle, tab routing (wouter) |
+| `DiscoverView.tsx` | Composes Carousel + CatalogGrid + DetailPanel |
+| `HistoryView.tsx` | Completed/stopped/up_to_date grid with panel |
+| `hooks/useSelectedTitle.ts` | Single title detail query (TanStack Query), toggle/close |
+| `hooks/useDiscover.ts` | Infinite query for catalog browse/search |
+| `hooks/useWatchlist.ts` | Watchlist query |
+| `hooks/useMutations.ts` | All write operations + global query invalidation |
+| `hooks/useUrlState.ts` | URL ↔ app state sync (wouter) |
+| `queryClient.ts` | TanStack Query client config |
 | `components/DetailPanel.tsx` | Fixed right panel: poster, scores, episodes, actions |
 | `components/Carousel.tsx` | Currently Watching horizontal scroll |
+| `components/CatalogGrid.tsx` | Infinite scroll grid with intersection observer |
+| `components/TitleCard.tsx` | Card with scores, genres, provider icons, ribbon progress |
+| `components/CarouselCard.tsx` | Compact card for carousel |
+| `components/ProviderIcons.tsx` | Platform logo badges |
+| `api.ts` | REST client (`fetchTitles`, `fetchTitleDetail`) |
+| `store.ts` | Backend REST wrapper (mutations + reads) |
+| `types.ts` | Shared TypeScript interfaces |
 | `components/CatalogGrid.tsx` | Infinite scroll grid with intersection observer |
 | `components/TitleCard.tsx` | Shared card with progress/status badges |
 | `components/CarouselCard.tsx` | Compact card for carousel |
@@ -215,21 +224,22 @@ When search has text → replaces all sections with flat results mixing ALL titl
 
 | Method | Endpoint | Purpose |
 |--------|----------|---------|
-| GET | `/api/titles?q=&sort=&genres=&type=&cursor=` | Search/browse. Returns `Title[]` |
-| GET | `/api/titles/:id` | Full detail: `TitleDetail` with seasons + watched state |
-| GET | `/api/discover` | Currently watching `Title[]` |
-| GET | `/api/history` | Completed + stopped `Title[]`, alphabetical |
+| GET | `/api/platforms` | Configured platform list `[{code, name, icon}]` |
+| GET | `/api/titles?q=&sort=&genres=&type=&cursor=&excludeTracked=&allPlatforms=` | Search/browse. Returns `{titles: Title[], cursor, hasMore}` |
+| GET | `/api/titles/:id` | Full detail: `TitleDetail` with seasons + per-episode providers + watched state |
+| GET | `/api/discover?allPlatforms=` | Currently watching `Title[]` |
+| GET | `/api/history?allPlatforms=` | Completed + stopped + up_to_date `Title[]` |
 | GET | `/api/watchlist` | Pinned `Title[]` |
 
 ### User actions (write)
 
 | Method | Endpoint | Body | Purpose |
 |--------|----------|------|---------|
-| POST | `/api/tracking` | `{titleId, type}` | Start tracking |
+| POST | `/api/tracking` | `{titleId, type}` | Start tracking (fails if in watchlist) |
 | DELETE | `/api/tracking` | `{titleId}` | Remove tracking + episodes |
 | POST | `/api/tracking/:id/stop` | — | Set stopped |
 | POST | `/api/tracking/:id/resume` | — | Resume watching |
-| POST | `/api/tracking/:id/episodes` | `{season, episode}` or `{episodes:[...]}` | Mark watched |
+| POST | `/api/tracking/:id/episodes` | `{episodes:[...], type}` | Mark watched (auto-tracks + removes from watchlist atomically) |
 | DELETE | `/api/tracking/:id/episodes` | same | Unmark |
 | POST | `/api/watchlist` | `{titleId, type}` | Pin |
 | DELETE | `/api/watchlist` | `{titleId}` | Unpin |

@@ -86,8 +86,7 @@ export async function getTitleDetail(titleId: string) {
   // Derive status
   let tracking = null;
   if (trackingRow) {
-    const allTracking = queries.allTracking.all() as any[];
-    const entry = allTracking.find((e: any) => e.titleId === titleId);
+    const entry = queries.getTrackingFull.get(titleId) as { status: string } | null;
     const storedStatus = entry?.status ?? "watching";
     let status: "watching" | "completed" | "stopped" = "watching";
     if (storedStatus === "stopped") status = "stopped";

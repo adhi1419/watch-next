@@ -66,6 +66,7 @@ export const queries = {
   watchingTracking: db.query("SELECT title_id as titleId, type, status, started_at as startedAt FROM tracking WHERE status = 'watching' ORDER BY started_at DESC"),
   allTrackingAlpha: db.query("SELECT title_id as titleId, type, status FROM tracking ORDER BY title_id ASC"),
   getTracking: db.query("SELECT title_id as titleId FROM tracking WHERE title_id = ?"),
+  getTrackingFull: db.query("SELECT title_id as titleId, type, status, started_at as startedAt FROM tracking WHERE title_id = ?"),
   insertTracking: db.query("INSERT OR IGNORE INTO tracking (title_id, type) VALUES (?, ?)"),
   deleteTracking: db.query("DELETE FROM tracking WHERE title_id = ?"),
   setStatus: db.query("UPDATE tracking SET status = ? WHERE title_id = ?"),
