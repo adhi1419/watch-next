@@ -1,278 +1,141 @@
-# Adhi's Watch Next — PRD
+# Watch Next — PRD
 
 ## Goal
 
-A personal streaming discovery and tracking app that surfaces high-quality titles via IMDb/RT scores, supports watchlist curation, and tracks episode-level progress — all without accounts or external dependencies beyond JustWatch's public GraphQL API.
-
-## Non-goals
-
-- Multi-user/auth (single-user local app)
-- Multi-platform catalog aggregation (Netflix DE only for now, extensible later)
-- Recommendation engine / ML-based suggestions
-- Mobile-native app (web-only, responsive)
-- Content playback or deep-linking to streaming player
-- TV Time / Trakt import (deferred)
-
----
+A personal streaming discovery and tracking app. Browse multi-provider catalogs (Netflix, Prime), track episode progress, manage a watchlist, and never lose track of what you're watching.
 
 ## Architecture
 
-### Data Source
-- **JustWatch GraphQL API** (`apis.justwatch.com/graphql`) — no auth required
-- Country: DE, Provider filter: `nfx` (Netflix)
-- Key queries: `popularTitles` (search/browse), `nodes` (batch metadata), `node` (seasons/episodes)
-- Available: title, year, synopsis, genres, IMDb/TMDB/RT scores, runtime, poster, credits, ageCertification, productionCountries, totalSeasonCount, full season/episode data
-
 ### Stack
 
-| Layer | Tech | Notes |
-|-------|------|-------|
-| Frontend | Vite 8 + React 19 + TypeScript 6 | Modular components, context-based state |
-| Backend | Bun + TypeScript (`server/`) | Single server, layered modules |
-| Database | `bun:sqlite` (`watched.db`) | Prepared statements, batch queries |
-| Hosting | systemd on dev desktop | Tunnel: `https://adhitr-netflix-recs.c.tunnels.lab.aws.dev` |
+| Layer | Tech |
+|-------|------|
+| Frontend | React 19, TypeScript, Vite 8, Tailwind CSS, TanStack Query, wouter, Lucide |
+| Backend | Bun, TypeScript, node:http |
+| Database | Firestore (per-user collections) |
+| Auth | Firebase Authentication (Google sign-in) |
+| Hosting | Cloud Run (europe-west3), Artifact Registry, Cloud Build |
+| CI/CD | GitHub Actions → Cloud Build → Cloud Run |
+| Data Source | JustWatch GraphQL API |
 
 ### Backend Modules (`server/`)
 
 | Module | Responsibility |
 |--------|---------------|
-| `index.ts` | HTTP server, route dispatch, error handling. Dev/prod mode via `NODE_ENV` |
-| `db.ts` | SQLite connection, schema migrations (`pragma user_version`), prepared statements |
-| `justwatch.ts` | Catalog provider: GraphQL client, multi-platform config, 5-min cache |
-| `status.ts` | `deriveStatus()` logic + `enrichEntries()` batch enrichment (no N+1) |
-| `validate.ts` | Safe JSON parsing, `requireFields()`, `ValidationError` class |
-| `routes/tracking.ts` | CRUD for tracking + episodes + stop/resume |
-| `routes/discover.ts` | `/api/discover` + `/api/history` |
-| `routes/watchlist.ts` | Watchlist CRUD with type validation |
+| `index.ts` | HTTP server, route dispatch, error handling, auth gate |
+| `firestore.ts` | Firestore client, per-user scoped queries |
+| `auth.ts` | Firebase ID token verification |
+| `justwatch.ts` | Catalog provider: multi-platform config, GraphQL client, 5-min cache |
+| `status.ts` | `deriveStatus()` + `enrichToTitles()` batch enrichment |
+| `validate.ts` | Input validation |
+| `routes/tracking.ts` | Tracking + episodes (atomic watchlist→tracking transition) |
+| `routes/discover.ts` | Search, browse, discover, history, title detail |
+| `routes/watchlist.ts` | Watchlist CRUD |
 
 ### Frontend Modules (`src/`)
 
 | Module | Responsibility |
 |--------|---------------|
-| `App.tsx` | Shell: topbar, search, filters, TV/Movie toggle, tab routing (wouter) |
-| `DiscoverView.tsx` | Composes Carousel + CatalogGrid + DetailPanel |
-| `HistoryView.tsx` | Completed/stopped/up_to_date grid with panel |
-| `hooks/useSelectedTitle.ts` | Single title detail query (TanStack Query), toggle/close |
+| `App.tsx` | Shell: topbar, search, filters, routing (wouter), auth gate |
+| `DiscoverView.tsx` | Carousel + Watch Next grid + DetailPanel |
+| `HistoryView.tsx` | Completed/stopped/up_to_date grid |
+| `hooks/useSelectedTitle.ts` | Title detail query (TanStack Query) |
 | `hooks/useDiscover.ts` | Infinite query for catalog browse/search |
 | `hooks/useWatchlist.ts` | Watchlist query |
-| `hooks/useMutations.ts` | All write operations + global query invalidation |
+| `hooks/useMutations.ts` | All write operations + global invalidation |
 | `hooks/useUrlState.ts` | URL ↔ app state sync (wouter) |
-| `queryClient.ts` | TanStack Query client config |
-| `components/DetailPanel.tsx` | Fixed right panel: poster, scores, episodes, actions |
-| `components/Carousel.tsx` | Currently Watching horizontal scroll |
-| `components/CatalogGrid.tsx` | Infinite scroll grid with intersection observer |
-| `components/TitleCard.tsx` | Card with scores, genres, provider icons, ribbon progress |
-| `components/CarouselCard.tsx` | Compact card for carousel |
+| `components/DetailPanel.tsx` | Fixed right panel with episodes, actions |
+| `components/TitleCard.tsx` | Card with scores, genres, providers, ribbon progress |
 | `components/ProviderIcons.tsx` | Platform logo badges |
-| `api.ts` | REST client (`fetchTitles`, `fetchTitleDetail`) |
-| `store.ts` | Backend REST wrapper (mutations + reads) |
-| `types.ts` | Shared TypeScript interfaces |
-| `components/CatalogGrid.tsx` | Infinite scroll grid with intersection observer |
-| `components/TitleCard.tsx` | Shared card with progress/status badges |
-| `components/CarouselCard.tsx` | Compact card for carousel |
-| `api.ts` | JustWatch GraphQL queries (popularTitles, seasons/episodes) |
-| `store.ts` | Backend REST wrapper |
-| `types.ts` | Shared TypeScript interfaces |
-
----
+| `components/AuthGate.tsx` | Login screen + auth state hook |
+| `components/ErrorBoundary.tsx` | Crash recovery |
 
 ## Data Model
 
-### Core Principle
-**"Completed" is never stored — it's derived at read time.**
-
-The backend fetches live episode counts from the catalog provider (5-min cache) and compares against watched episodes. No stale data, no background cron.
-
 ### Core Entity: Title
-
-Every API response uses the same shape. The frontend never sees provider-native types.
 
 ```typescript
 interface Title {
-  id: string;                    // Opaque provider ID
-  type: "MOVIE" | "SHOW";       // Domain types — backend maps from provider
+  id: string;
+  type: "MOVIE" | "SHOW";
   title: string;
   year: number;
   synopsis: string;
   posterUrl: string | null;
   genres: string[];
   scores: { imdb: number | null; rt: number | null; tmdb: number | null };
-  runtime: number | null;        // Minutes (movies), null (shows)
-  seasonCount: number | null;    // Shows only
+  runtime: number | null;
+  seasonCount: number | null;
   cast: { name: string; character: string | null }[];
   ageRating: string | null;
-  tracking: {                    // null if not tracked
-    status: "watching" | "completed" | "stopped";
-    watched: number;
-    total: number;
-  } | null;
+  tracking: { status: "watching" | "completed" | "stopped" | "up_to_date"; watched: number; total: number } | null;
   pinned: boolean;
-}
-
-// Full detail (returned by /api/titles/:id only)
-interface TitleDetail extends Title {
-  seasons: Season[];
-}
-
-interface Season {
-  number: number;
-  episodes: { number: number; title: string; runtime: number | null; watched: boolean }[];
+  providers: string[];
 }
 ```
 
-### Design Principles
+### Principles
 
-1. **DB stores only IDs + user state** — no catalog data duplicated
-2. **Backend is the only layer that knows JustWatch exists** — maps at the boundary
-3. **Type mapping**: JustWatch SHOW/MINI_SERIES → SHOW, MOVIE/SHORT_FILM → MOVIE
-4. **Enrichment at read time** — hydrate from provider on every response (cached)
-5. **Consistent shape** — same Title entity everywhere in the system
+1. **DB stores only IDs + user state** — no catalog data
+2. **Backend is the only layer that knows JustWatch** — type mapping at boundary
+3. **Completed is derived at read time** — live episode counts from provider
+4. **Watchlist and tracking are mutually exclusive** — enforced atomically
+5. **Multi-provider** — configurable platform list, per-episode availability
+6. **Up-to-date detection** — shows with all platform-available episodes watched
 
-### States (derived at API response time)
-
-| State | Condition |
-|-------|-----------|
-| Currently Watching | tracking entry + `watched < total` (live) |
-| Completed | tracking entry + `watched >= total` (live) + status ≠ 'stopped' |
-| Stopped | explicit `status = 'stopped'` in DB |
-| Pinned (Watchlist) | in watchlist table |
-| Unwatched | no tracking entry |
-
-### DB Schema
-
-```sql
--- User state only. No catalog data.
-CREATE TABLE tracking (
-  title_id TEXT PRIMARY KEY,
-  type TEXT NOT NULL CHECK(type IN ('MOVIE','SHOW')),
-  status TEXT NOT NULL DEFAULT 'watching' CHECK(status IN ('watching','stopped')),
-  started_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
-CREATE TABLE episode_progress (
-  title_id TEXT NOT NULL,
-  season INT NOT NULL,
-  episode INT NOT NULL,
-  watched_at TEXT NOT NULL DEFAULT (datetime('now')),
-  PRIMARY KEY(title_id, season, episode)
-);
-
-CREATE TABLE watchlist (
-  title_id TEXT PRIMARY KEY,
-  type TEXT NOT NULL CHECK(type IN ('MOVIE','SHOW')),
-  added_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-```
-
----
-
-## UI Design
-
-### Layout
+### Firestore Schema
 
 ```
-┌────────────────────────────────────────────────────────────┐
-│ Top bar: "Adhi's Watch Next" | Search + ⚙️ | [TV] [Movies] │
-├────────────────────────────────────────────────────────────┤
-│            [Discover]  [History]                            │
-├────────────────────────────────────────────────────────────┤
-│ (tab content fills remaining viewport)                     │
-└────────────────────────────────────────────────────────────┘
+users/{uid}/tracking/{titleId}     → { type, status, startedAt }
+users/{uid}/episodes/{titleId_s_e} → { titleId, season, episode, watchedAt }
+users/{uid}/watchlist/{titleId}    → { type, addedAt }
 ```
-
-### Discover Tab (default)
-
-**TV Shows mode:**
-- **Currently Watching** — horizontal carousel, ordered by recency. TV only.
-- **Watch Next** — vertical infinite scroll. Pinned watchlist first, then JustWatch recs (IMDb sorted). Excludes currently watching + history.
-
-**Movies mode:**
-- No carousel. Watch Next only: pinned movies → movie recommendations.
-
-### History Tab
-- Completed + Stopped titles, alphabetical order
-- Badge per card: "Completed ✅" or "Stopped (5/10)"
-- Respects TV/Movie toggle
-- Actions: Resume Watching, Mark Unwatched
-
-### Search Mode (overrides tabs)
-When search has text → replaces all sections with flat results mixing ALL titles with inline status badges. Clears when search is emptied.
-
-### Deduplication Rules
-1. Currently Watching > Pinned Watch Next > Recommendations
-2. History (completed + stopped) excluded from Watch Next
-3. No title appears in more than one section
-
-### Detail Panel (right side, fixed, full height)
-- Poster, title, scores (IMDb + RT), year, seasons/runtime
-- Synopsis, genres (clickable → filter), cast (clickable → search)
-- Season dropdown — opens to season containing next unwatched episode
-- Episodes with round check marks (green when watched)
-- Actions: Add to Watchlist | Mark Watched | Stop Watching | Resume
-
-### Card Design
-- Glassmorphism style (frosted glass, blur)
-- Title (wraps 2 lines), IMDb + RT scores, year badge, season/runtime badge, genre chips
-- Progress bar: green (watching), red (stopped), full purple + ✓ badge (completed)
-- Completed cards: 70% opacity, purple border
-
----
 
 ## API Surface
 
-### Catalog (read, enriched from provider)
+### Public
 
 | Method | Endpoint | Purpose |
 |--------|----------|---------|
-| GET | `/api/platforms` | Configured platform list `[{code, name, icon}]` |
-| GET | `/api/titles?q=&sort=&genres=&type=&cursor=&excludeTracked=&allPlatforms=` | Search/browse. Returns `{titles: Title[], cursor, hasMore}` |
-| GET | `/api/titles/:id` | Full detail: `TitleDetail` with seasons + per-episode providers + watched state |
-| GET | `/api/discover?allPlatforms=` | Currently watching `Title[]` |
-| GET | `/api/history?allPlatforms=` | Completed + stopped + up_to_date `Title[]` |
-| GET | `/api/watchlist` | Pinned `Title[]` |
+| GET | `/api/platforms` | Platform config `[{code, name, icon}]` |
 
-### User actions (write)
+### Authenticated (Bearer token)
 
-| Method | Endpoint | Body | Purpose |
-|--------|----------|------|---------|
-| POST | `/api/tracking` | `{titleId, type}` | Start tracking (fails if in watchlist) |
-| DELETE | `/api/tracking` | `{titleId}` | Remove tracking + episodes |
-| POST | `/api/tracking/:id/stop` | — | Set stopped |
-| POST | `/api/tracking/:id/resume` | — | Resume watching |
-| POST | `/api/tracking/:id/episodes` | `{episodes:[...], type}` | Mark watched (auto-tracks + removes from watchlist atomically) |
-| DELETE | `/api/tracking/:id/episodes` | same | Unmark |
-| POST | `/api/watchlist` | `{titleId, type}` | Pin |
-| DELETE | `/api/watchlist` | `{titleId}` | Unpin |
-
-All return JSON. Errors: `400` validation, `404` not found, `502` upstream failure.
-
----
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | `/api/titles?q=&sort=&genres=&type=&cursor=&excludeTracked=&allPlatforms=` | Browse/search |
+| GET | `/api/titles/:id` | Title detail with seasons + per-episode providers + watched |
+| GET | `/api/discover?allPlatforms=` | Currently watching |
+| GET | `/api/history?allPlatforms=` | Completed + stopped + up_to_date |
+| GET | `/api/watchlist` | Pinned titles |
+| POST | `/api/tracking` | Start tracking `{titleId, type}` |
+| DELETE | `/api/tracking` | Remove tracking `{titleId}` |
+| POST | `/api/tracking/:id/stop` | Stop watching |
+| POST | `/api/tracking/:id/resume` | Resume |
+| POST | `/api/tracking/:id/episodes` | Mark episodes `{episodes:[...], type}` (atomic) |
+| DELETE | `/api/tracking/:id/episodes` | Unmark (auto-untracks at zero) |
+| POST | `/api/watchlist` | Pin `{titleId, type}` |
+| DELETE | `/api/watchlist` | Unpin `{titleId}` |
 
 ## Running
 
 ```bash
-# Development (backend API on :5173, Vite HMR on :5173 via proxy)
-bun server/index.ts                     # API only (NODE_ENV=development for CORS)
-npx vite                                # Frontend with HMR
+# Local development
+PORT=5174 NODE_ENV=development bun server/index.ts
+npx vite
 
-# Production
-npx vite build                          # Build frontend to dist/
-bun server/index.ts                     # Serves dist/ + API on :5173
-
-# systemd
-sudo systemctl start netflix-recs       # Uses server/index.ts
+# Production (Cloud Run)
+# Deployed via GitHub Actions on push to main
+# URL: https://watch-next-547004818963.europe-west3.run.app
 ```
-
----
 
 ## Future Stories
 
-| ID | Story | Status |
-|----|-------|--------|
-| S1 | Multi-Provider Support (Disney+, Prime via packages filter) | Deferred |
-| S2 | TV Time Import (CSV/JSON match to JustWatch IDs) | Deferred |
-| S3 | VPS Deployment (Docker, Caddy HTTPS) | Deferred |
-| S4 | Ratings & Notes (star rating + free-text on completed) | Deferred |
-| S5 | Data Export (JSON backup) | Deferred |
-| S6 | CSS Modules / split stylesheets | Ready |
-| S7 | Mobile responsive breakpoints | Deferred |
+| Story | Status |
+|-------|--------|
+| Additional providers (Disney+, etc.) | Ready (add to PLATFORMS array) |
+| User preferences (platform selection per user) | Planned |
+| Data export/import | Planned |
+| Ratings & notes on completed titles | Planned |
+| Mobile responsive layout | Planned |
+| Custom domain | Planned |

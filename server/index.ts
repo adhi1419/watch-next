@@ -111,5 +111,5 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Adhi's Watch Next [${isDev ? "dev" : "prod"}] → http://0.0.0.0:${PORT}`);
+  console.log(`Watch Next [${isDev ? "dev" : "prod"}] → http://0.0.0.0:${PORT}`);
 });

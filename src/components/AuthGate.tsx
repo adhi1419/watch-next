@@ -16,7 +16,7 @@ export function useAuth() {
 export function LoginScreen({ onSignIn }: { onSignIn: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center h-screen gap-6">
-      <h1 className="text-3xl font-bold">Adhi's Watch Next</h1>
+      <h1 className="text-3xl font-bold">Watch Next</h1>
       <p className="text-[var(--color-muted)]">Track what you're watching across Netflix & Prime</p>
       <button
         onClick={onSignIn}

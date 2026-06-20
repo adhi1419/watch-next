@@ -45,7 +45,7 @@ function AppShell({ user, onSignOut }: { user: any; onSignOut: () => void }) {
     <div className="flex flex-col h-screen">
       {/* Top Bar */}
       <nav className="sticky top-0 z-100 flex items-center justify-between px-6 h-[var(--spacing-topbar)] bg-[rgba(30,30,30,0.7)] backdrop-blur-[16px] border-b border-white/8 w-full">
-        <h1 className="text-lg whitespace-nowrap shrink-0">Adhi's Watch Next</h1>
+        <h1 className="text-lg whitespace-nowrap shrink-0">Watch Next</h1>
         <div className="topbar-search flex-1 max-w-[500px] flex items-center relative">
           <input
             type="text"
