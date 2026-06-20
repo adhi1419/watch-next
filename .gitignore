@@ -29,3 +29,6 @@ watched.db
 # Environment
 .env
 .env.local
+
+# GCP credentials
+service-account.json

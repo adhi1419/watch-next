@@ -1,9 +1,11 @@
-import { initializeApp } from "firebase-admin/app";
+import { initializeApp, applicationDefault } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 
-// Initialize Firebase Admin (uses GOOGLE_APPLICATION_CREDENTIALS in prod, or local emulator)
-const app = initializeApp();
-const db = getFirestore(app);
+const app = initializeApp({
+  credential: applicationDefault(),
+  projectId: process.env.FIREBASE_PROJECT_ID || "watch-next-500021",
+});
+const db = getFirestore(app, "watch-next-user-data");
 
 // --- Query helpers scoped to a user ---
 
@@ -15,16 +17,16 @@ export function userDb(uid: string) {
   return {
     // Tracking
     async allTracking() {
-      const snap = await trackingCol.orderBy("startedAt", "desc").get();
+      const snap = await trackingCol.get();
       return snap.docs.map(d => ({ titleId: d.id, ...d.data() }));
     },
     async watchingTracking() {
-      const snap = await trackingCol.where("status", "==", "watching").orderBy("startedAt", "desc").get();
+      const snap = await trackingCol.where("status", "==", "watching").get();
       return snap.docs.map(d => ({ titleId: d.id, ...d.data() }));
     },
     async allTrackingAlpha() {
       const snap = await trackingCol.get();
-      return snap.docs.map(d => ({ titleId: d.id, ...d.data() })).sort((a, b) => (a.titleId > b.titleId ? 1 : -1));
+      return snap.docs.map(d => ({ titleId: d.id, ...d.data() }));
     },
     async getTracking(titleId: string) {
       const doc = await trackingCol.doc(titleId).get();
@@ -42,8 +44,9 @@ export function userDb(uid: string) {
 
     // Episodes
     async episodesForTitle(titleId: string) {
-      const snap = await episodesCol.where("titleId", "==", titleId).orderBy("season").orderBy("episode").get();
-      return snap.docs.map(d => d.data() as { titleId: string; season: number; episode: number; watchedAt: string });
+      const snap = await episodesCol.where("titleId", "==", titleId).get();
+      return snap.docs.map(d => d.data() as { titleId: string; season: number; episode: number; watchedAt: string })
+        .sort((a, b) => a.season - b.season || a.episode - b.episode);
     },
     async episodeCountsForTitles(titleIds: string[]) {
       if (!titleIds.length) return [];
@@ -82,7 +85,7 @@ export function userDb(uid: string) {
 
     // Watchlist
     async allWatchlist() {
-      const snap = await watchlistCol.orderBy("addedAt", "desc").get();
+      const snap = await watchlistCol.get();
       return snap.docs.map(d => ({ titleId: d.id, ...d.data() }));
     },
     async getWatchlist(titleId: string) {
