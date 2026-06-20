@@ -48,9 +48,15 @@ const server = createServer(async (req, res) => {
       return json(200, result);
     }
 
+    // --- Platforms ---
+    if (path === "/api/platforms" && method === "GET") {
+      const { PLATFORMS } = await import("./justwatch");
+      return json(200, PLATFORMS);
+    }
+
     // --- Discover & History & Watchlist (enriched reads) ---
-    if (path === "/api/discover" && method === "GET") return json(200, await discover.getDiscover());
-    if (path === "/api/history" && method === "GET") return json(200, await discover.getHistory());
+    if (path === "/api/discover" && method === "GET") return json(200, await discover.getDiscover(url.searchParams.get("allPlatforms") === "true"));
+    if (path === "/api/history" && method === "GET") return json(200, await discover.getHistory(url.searchParams.get("allPlatforms") === "true"));
     if (path === "/api/watchlist") {
       if (method === "GET") return json(200, await discover.getWatchlist());
       if (method === "POST") return json(200, await watchlist.postWatchlist(req));

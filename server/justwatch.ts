@@ -1,19 +1,26 @@
 const GQL_URL = "https://apis.justwatch.com/graphql";
+const COUNTRY = "DE";
 
-// Type mapping: JustWatch → domain
-const TYPE_MAP: Record<string, "MOVIE" | "SHOW"> = {
-  SHOW: "SHOW",
-  MINI_SERIES: "SHOW",
-  MOVIE: "MOVIE",
-  SHORT_FILM: "MOVIE",
-};
-
-export function mapType(jwType: string): "MOVIE" | "SHOW" {
-  return TYPE_MAP[jwType] ?? "MOVIE";
+// --- Platform configuration (will move to user prefs table with multi-user) ---
+export interface Platform {
+  code: string;       // JustWatch package code
+  name: string;
+  icon: string;       // URL to platform icon
 }
 
-// --- Title metadata (batch, for enriching tracked/watchlist/search results) ---
+export const PLATFORMS: Platform[] = [
+  { code: "nfx", name: "Netflix", icon: "https://images.justwatch.com/icon/207360008/s100/netflix.webp" },
+  { code: "amp", name: "Amazon Prime", icon: "https://images.justwatch.com/icon/52449861/s100/amazon-prime-video.webp" },
+];
 
+const PACKAGE_CODES = PLATFORMS.map(p => p.code);
+
+
+// --- Type mapping ---
+const TYPE_MAP: Record<string, "MOVIE" | "SHOW"> = { SHOW: "SHOW", MINI_SERIES: "SHOW", MOVIE: "MOVIE", SHORT_FILM: "MOVIE" };
+export function mapType(jwType: string): "MOVIE" | "SHOW" { return TYPE_MAP[jwType] ?? "MOVIE"; }
+
+// --- Title metadata ---
 export interface TitleMeta {
   id: string;
   type: "MOVIE" | "SHOW";
@@ -28,23 +35,26 @@ export interface TitleMeta {
   cast: { name: string; character: string | null }[];
   ageRating: string | null;
   totalEpisodes: number;
+  providers: string[]; // platform codes available on
 }
 
-// Cache with TTL
 const cache = new Map<string, { data: TitleMeta; expires: number }>();
 const TTL = 5 * 60 * 1000;
 
-const NODES_QUERY = `query($ids: [ID!]!) {
+const NODES_QUERY = `query($ids: [ID!]!, $country: Country!, $packages: [String!]) {
   nodes(ids: $ids) {
     id
     ... on MovieOrShowOrSeasonOrEpisode { objectType }
     ... on Show { totalSeasonCount seasons { episodes { id } } }
     ... on MovieOrShow {
-      content(country: "DE", language: "en") {
+      content(country: $country, language: "en") {
         title originalReleaseYear shortDescription posterUrl runtime ageCertification
         genres { shortName }
         scoring { imdbScore imdbVotes tmdbScore tomatoMeter }
         credits { name role characterName }
+      }
+      offers(country: $country, platform: WEB, filter: { packages: $packages }) {
+        package { shortName }
       }
     }
   }
@@ -53,6 +63,7 @@ const NODES_QUERY = `query($ids: [ID!]!) {
 function parseNode(node: any): TitleMeta {
   const c = node.content ?? {};
   const totalEpisodes = (node.seasons ?? []).reduce((sum: number, s: any) => sum + (s.episodes?.length ?? 0), 0);
+  const providers = [...new Set((node.offers ?? []).map((o: any) => o.package?.shortName).filter(Boolean))] as string[];
   return {
     id: node.id,
     type: mapType(node.objectType),
@@ -61,16 +72,13 @@ function parseNode(node: any): TitleMeta {
     synopsis: c.shortDescription ?? "",
     posterUrl: c.posterUrl ? `https://images.justwatch.com${c.posterUrl.replace("{profile}", "s276").replace("{format}", "webp")}` : null,
     genres: (c.genres ?? []).map((g: any) => g.shortName),
-    scores: {
-      imdb: c.scoring?.imdbScore ?? null,
-      rt: c.scoring?.tomatoMeter ?? null,
-      tmdb: c.scoring?.tmdbScore ?? null,
-    },
+    scores: { imdb: c.scoring?.imdbScore ?? null, rt: c.scoring?.tomatoMeter ?? null, tmdb: c.scoring?.tmdbScore ?? null },
     runtime: c.runtime ?? null,
     seasonCount: node.totalSeasonCount ?? null,
     cast: (c.credits ?? []).filter((cr: any) => cr.role === "ACTOR").slice(0, 10).map((cr: any) => ({ name: cr.name, character: cr.characterName })),
     ageRating: c.ageCertification ?? null,
     totalEpisodes,
+    providers,
   };
 }
 
@@ -90,7 +98,7 @@ export async function fetchTitlesMeta(ids: string[]): Promise<Map<string, TitleM
       const resp = await fetch(GQL_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: NODES_QUERY, variables: { ids: uncached } }),
+        body: JSON.stringify({ query: NODES_QUERY, variables: { ids: uncached, country: COUNTRY, packages: PACKAGE_CODES } }),
       });
       if (resp.ok) {
         const json = await resp.json();
@@ -105,81 +113,75 @@ export async function fetchTitlesMeta(ids: string[]): Promise<Map<string, TitleM
       console.error("[justwatch] batch fetch failed:", e);
     }
   }
-
   return result;
 }
 
-// --- Search/browse (for /api/titles) ---
-
-const SEARCH_QUERY = `query($first: Int!, $after: String, $searchQuery: String, $sortBy: PopularTitlesSorting!, $genres: [String!]) {
-  popularTitles(country: "DE", first: $first, after: $after, sortBy: $sortBy, sortRandomSeed: 0,
-    filter: { packages: ["nfx"], searchQuery: $searchQuery, genres: $genres }) {
+// --- Search/browse ---
+const SEARCH_QUERY = `query($first: Int!, $after: String, $searchQuery: String, $sortBy: PopularTitlesSorting!, $genres: [String!], $country: Country!, $packages: [String!]) {
+  popularTitles(country: $country, first: $first, after: $after, sortBy: $sortBy, sortRandomSeed: 0,
+    filter: { packages: $packages, searchQuery: $searchQuery, genres: $genres }) {
     edges { node { id
       ... on MovieOrShowOrSeasonOrEpisode { objectType }
       ... on Show { totalSeasonCount seasons { episodes { id } } }
-      content(country: "DE", language: "en") {
+      content(country: $country, language: "en") {
         title originalReleaseYear shortDescription posterUrl runtime ageCertification
         genres { shortName }
         scoring { imdbScore tmdbScore tomatoMeter }
         credits { name role characterName }
+      }
+      offers(country: $country, platform: WEB, filter: { packages: $packages }) {
+        package { shortName }
       }
     } }
     pageInfo { endCursor hasNextPage }
   }
 }`;
 
-export interface SearchResult {
-  titles: TitleMeta[];
-  cursor: string | null;
-  hasMore: boolean;
-}
+export interface SearchResult { titles: TitleMeta[]; cursor: string | null; hasMore: boolean }
 
-export async function searchTitles(opts: { query?: string; sort?: string; genres?: string[]; cursor?: string; pageSize?: number }): Promise<SearchResult> {
-  const { query, sort = "IMDB_SCORE", genres, cursor, pageSize = 50 } = opts;
+export async function searchTitles(opts: { query?: string; sort?: string; genres?: string[]; cursor?: string; pageSize?: number; allPlatforms?: boolean }): Promise<SearchResult> {
+  const { query, sort = "IMDB_SCORE", genres, cursor, pageSize = 50, allPlatforms } = opts;
+  const packages = allPlatforms ? null : PACKAGE_CODES;
   const resp = await fetch(GQL_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       query: SEARCH_QUERY,
-      variables: { first: pageSize, after: cursor || null, searchQuery: query || null, sortBy: sort, genres: genres?.length ? genres : null },
+      variables: { first: pageSize, after: cursor || null, searchQuery: query || null, sortBy: sort, genres: genres?.length ? genres : null, country: COUNTRY, packages },
     }),
   });
   if (!resp.ok) throw new Error(`JustWatch search failed: ${resp.status}`);
   const json = await resp.json();
   const data = json.data.popularTitles;
-  const titles = (data.edges ?? []).map((e: any) => {
-    const meta = parseNode(e.node);
-    cache.set(meta.id, { data: meta, expires: Date.now() + TTL });
-    return meta;
-  });
+  const titles = (data.edges ?? []).map((e: any) => { const meta = parseNode(e.node); cache.set(meta.id, { data: meta, expires: Date.now() + TTL }); return meta; });
   return { titles, cursor: data.pageInfo.endCursor, hasMore: data.pageInfo.hasNextPage };
 }
 
-// --- Season detail (for /api/titles/:id) ---
-
-const SEASONS_QUERY = `query($id: ID!) {
+// --- Season detail with per-episode providers ---
+const SEASONS_QUERY = `query($id: ID!, $country: Country!, $packages: [String!]) {
   node(id: $id) {
     ... on Show {
       seasons {
-        content(country: "DE", language: "en") { seasonNumber }
+        content(country: $country, language: "en") { seasonNumber }
         episodes {
-          content(country: "DE", language: "en") { title episodeNumber seasonNumber runtime }
+          content(country: $country, language: "en") { title episodeNumber seasonNumber runtime }
+          offers(country: $country, platform: WEB, filter: { packages: $packages }) {
+            package { shortName }
+          }
         }
       }
     }
   }
 }`;
 
-export interface SeasonData {
-  number: number;
-  episodes: { number: number; title: string; runtime: number | null }[];
-}
+export interface EpisodeData { number: number; title: string; runtime: number | null; providers: string[] }
+export interface SeasonData { number: number; episodes: EpisodeData[] }
 
 export async function fetchSeasons(titleId: string): Promise<SeasonData[]> {
   const resp = await fetch(GQL_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query: SEASONS_QUERY, variables: { id: titleId } }),
+    body: JSON.stringify({ query: SEASONS_QUERY, variables: { id: titleId, country: COUNTRY, packages: PACKAGE_CODES } }),
   });
   if (!resp.ok) return [];
   const json = await resp.json();
@@ -191,42 +193,28 @@ export async function fetchSeasons(titleId: string): Promise<SeasonData[]> {
       number: e.content.episodeNumber,
       title: e.content.title ?? "",
       runtime: e.content.runtime ?? null,
+      providers: [...new Set((e.offers ?? []).map((o: any) => o.package?.shortName).filter(Boolean))] as string[],
     })),
   }));
 }
 
-// --- Netflix availability check (targeted, for few titles) ---
-
-const AVAILABILITY_QUERY = `query($id: ID!) {
-  node(id: $id) {
-    ... on Show { seasons {
-      episodes {
-        id
-        offers(country: "DE", platform: WEB, filter: { packages: ["nfx"] }) { id }
-      }
-    } }
-  }
-}`;
-
-/**
- * Count Netflix-available episodes for a single show.
- * Only call this for shows in "watching" state (max ~5 at a time).
- */
-export async function fetchNetflixAvailableCount(titleId: string): Promise<number | undefined> {
+// --- Availability check (provider-agnostic, for up_to_date detection) ---
+export async function fetchAvailableEpisodeCount(titleId: string): Promise<number | undefined> {
   try {
     const resp = await fetch(GQL_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: AVAILABILITY_QUERY, variables: { id: titleId } }),
+      body: JSON.stringify({
+        query: `query($id: ID!, $country: Country!, $packages: [String!]) {
+          node(id: $id) { ... on Show { seasons { episodes { id offers(country: $country, platform: WEB, filter: { packages: $packages }) { id } } } } }
+        }`,
+        variables: { id: titleId, country: COUNTRY, packages: PACKAGE_CODES },
+      }),
     });
     if (!resp.ok) return undefined;
     const json = await resp.json();
     const seasons = json.data?.node?.seasons;
     if (!seasons) return undefined;
-    return seasons.reduce((sum: number, s: any) =>
-      sum + (s.episodes ?? []).filter((e: any) => e.offers?.length > 0).length, 0
-    );
-  } catch {
-    return undefined;
-  }
+    return seasons.reduce((sum: number, s: any) => sum + (s.episodes ?? []).filter((e: any) => e.offers?.length > 0).length, 0);
+  } catch { return undefined; }
 }

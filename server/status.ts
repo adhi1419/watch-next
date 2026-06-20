@@ -1,5 +1,5 @@
 import { queries } from "./db";
-import { fetchTitlesMeta, fetchNetflixAvailableCount, type TitleMeta } from "./justwatch";
+import { fetchTitlesMeta, fetchAvailableEpisodeCount, type TitleMeta } from "./justwatch";
 
 export type DerivedStatus = "watching" | "completed" | "stopped" | "up_to_date";
 
@@ -18,6 +18,7 @@ export interface Title {
   ageRating: string | null;
   tracking: { status: DerivedStatus; watched: number; total: number } | null;
   pinned: boolean;
+  providers: string[];
 }
 
 function deriveStatus(watched: number, total: number, storedStatus: string, available?: number): DerivedStatus {
@@ -34,7 +35,7 @@ function deriveStatus(watched: number, total: number, storedStatus: string, avai
  */
 export async function enrichToTitles(
   entries: { titleId: string; type: string; status?: string }[],
-  opts?: { includeWatchlistCheck?: boolean }
+  opts?: { includeWatchlistCheck?: boolean; allPlatforms?: boolean }
 ): Promise<Title[]> {
   if (!entries.length) return [];
 
@@ -78,19 +79,23 @@ export async function enrichToTitles(
         ageRating: meta.ageRating,
         tracking: status ? { status, watched, total } : null,
         pinned: watchlistSet.has(e.titleId),
+        providers: meta.providers,
       };
     })
     .filter((t): t is Title => t !== null);
 
   // Targeted availability check for shows still "watching" with progress
-  const watchingShows = results.filter(t => t.tracking?.status === "watching" && t.type === "SHOW" && t.tracking.watched > 0);
-  if (watchingShows.length > 0) {
-    const checks = await Promise.all(watchingShows.map(t => fetchNetflixAvailableCount(t.id)));
-    for (let i = 0; i < watchingShows.length; i++) {
-      const available = checks[i];
-      const t = watchingShows[i];
-      if (available !== undefined && t.tracking && t.tracking.watched >= available) {
-        t.tracking = { ...t.tracking, status: "up_to_date" };
+  // Skip when allPlatforms=true (count all episodes, no platform filtering)
+  if (!opts?.allPlatforms) {
+    const watchingShows = results.filter(t => t.tracking?.status === "watching" && t.type === "SHOW" && t.tracking.watched > 0);
+    if (watchingShows.length > 0) {
+      const checks = await Promise.all(watchingShows.map(t => fetchAvailableEpisodeCount(t.id)));
+      for (let i = 0; i < watchingShows.length; i++) {
+        const available = checks[i];
+        const t = watchingShows[i];
+        if (available !== undefined && t.tracking && t.tracking.watched >= available) {
+          t.tracking = { ...t.tracking, status: "up_to_date" };
+        }
       }
     }
   }
@@ -135,6 +140,7 @@ export async function enrichSearchResults(metas: TitleMeta[]): Promise<Title[]> 
       ageRating: meta.ageRating,
       tracking: status ? { status, watched, total } : null,
       pinned: watchlistSet.has(meta.id),
+      providers: meta.providers,
     };
   });
 }

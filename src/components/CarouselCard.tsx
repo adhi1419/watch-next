@@ -8,7 +8,7 @@ interface CarouselCardProps {
 
 export default function CarouselCard({ title, posterUrl, watched, total, onClick }: CarouselCardProps) {
   return (
-    <div onClick={onClick} className="flex-[0_0_320px] bg-white/4 border border-white/8 rounded-[10px] overflow-hidden cursor-pointer transition-all duration-200 hover:bg-white/8 hover:scale-[1.02]">
+    <div onClick={onClick} data-card className="flex-[0_0_320px] bg-white/4 border border-white/8 rounded-[10px] overflow-hidden cursor-pointer transition-all duration-200 hover:bg-white/8 hover:scale-[1.02]">
       {posterUrl && <img src={posterUrl} alt={title} loading="lazy" className="w-full h-[400px] object-cover" />}
       <div className="p-1.5 px-2">
         <span className="text-[0.78rem] font-medium line-clamp-2">{title}</span>

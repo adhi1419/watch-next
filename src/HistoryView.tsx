@@ -1,49 +1,26 @@
-import { useEffect, useState } from "react";
-import { useTracking } from "./context/TrackingContext";
-import { getHistory, stopTracking } from "./store";
+import { useQuery } from "@tanstack/react-query";
+import { useSelectedTitle } from "./hooks/useSelectedTitle";
+import { useWatchlist } from "./hooks/useWatchlist";
+import { useMutations } from "./hooks/useMutations";
+import { getHistory } from "./store";
 import TitleCard from "./components/TitleCard";
 import DetailPanel from "./components/DetailPanel";
-import { useWatchlist } from "./hooks/useWatchlist";
-import type { Title } from "./types";
 
 type FilterType = "MOVIE" | "SHOW";
 
-interface HistoryViewProps {
-  filterType: FilterType;
-}
+export default function HistoryView({ filterType, allPlatforms }: { filterType: FilterType; allPlatforms: boolean }) {
+  const { selected, selectedId, select, close } = useSelectedTitle();
+  const { ids: watchlistIds } = useWatchlist();
+  const mutations = useMutations();
 
-export default function HistoryView({ filterType }: HistoryViewProps) {
-  const tracking = useTracking();
-  const { toggle: toggleWatchlist } = useWatchlist();
-  const [items, setItems] = useState<Title[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [selected, setSelected] = useState<Title | null>(null);
-
-  useEffect(() => {
-    setLoading(true);
-    getHistory().then(data => {
-      setItems(data.filter(t => t.type === filterType).sort((a, b) => a.title.localeCompare(b.title)));
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, [filterType]);
-
-  const onSelect = async (item: Title) => {
-    if (selected?.id === item.id) { setSelected(null); return; }
-    setSelected(item);
-    await tracking.handleSelect(item);
-  };
-
-  const handleUnwatch = async (id: string) => {
-    await stopTracking(id);
-    setItems(prev => prev.filter(i => i.id !== id));
-    setSelected(null);
-  };
+  const { data: allHistory = [], isLoading } = useQuery({ queryKey: ["history", allPlatforms], queryFn: () => getHistory(allPlatforms) });
+  const items = allHistory.filter(t => t.type === filterType).sort((a, b) => a.title.localeCompare(b.title));
 
   return (
     <>
-      {loading && <p className="text-[var(--color-muted)] text-center py-8">Loading history...</p>}
-      {!loading && items.length === 0 && <p className="text-[var(--color-muted)] text-center py-8">No history yet.</p>}
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(360px,1fr))] gap-5 px-4">
+      {isLoading && <p className="text-[var(--color-muted)] text-center py-8">Loading history...</p>}
+      {!isLoading && items.length === 0 && <p className="text-[var(--color-muted)] text-center py-8">No history yet.</p>}
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(360px,1fr))] gap-5 px-6">
         {items.map(item => (
           <TitleCard
             key={item.id}
@@ -56,11 +33,12 @@ export default function HistoryView({ filterType }: HistoryViewProps) {
             totalSeasonCount={item.seasonCount ?? undefined}
             runtime={item.runtime ?? undefined}
             genres={item.genres}
+            providers={item.providers}
             isCompleted={item.tracking?.status === "completed"}
             isStopped={item.tracking?.status === "stopped"}
-            isSelected={selected?.id === item.id}
+            isSelected={selectedId === item.id}
             progress={item.tracking ? { watched: item.tracking.watched, total: item.tracking.total } : undefined}
-            onClick={() => onSelect(item)}
+            onClick={() => select(item.id)}
           />
         ))}
       </div>
@@ -68,12 +46,12 @@ export default function HistoryView({ filterType }: HistoryViewProps) {
       {selected && (
         <DetailPanel
           selected={selected}
-          onClose={() => setSelected(null)}
-          onToggleWatchlist={toggleWatchlist}
-          onStopWatching={handleUnwatch}
+          onClose={close}
+          onToggleWatchlist={mutations.toggleWatchlist}
+          isInWatchlist={watchlistIds.has(selected.id)}
+          onStopWatching={async (id) => { await mutations.untrack.mutateAsync(id); close(); }}
           onGenreClick={() => {}}
           onActorClick={() => {}}
-          onTrackingChanged={(id) => { setItems(prev => prev.filter(i => i.id !== id)); setSelected(null); }}
         />
       )}
     </>

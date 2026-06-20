@@ -44,8 +44,9 @@ export default function CatalogGrid({ titles, selectedId, loading, hasMore, onLo
             isCompleted={t.tracking?.status === "completed"}
             isStopped={t.tracking?.status === "stopped"}
             isSelected={selectedId === t.id}
+            isPinned={t.pinned}
+            providers={t.providers}
             progress={t.tracking ? { watched: t.tracking.watched, total: t.tracking.total } : undefined}
-            statusBadge={undefined}
             onClick={() => onSelect(t)}
           />
         ))}

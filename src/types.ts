@@ -13,6 +13,7 @@ export interface Title {
   ageRating: string | null;
   tracking: { status: "watching" | "completed" | "stopped" | "up_to_date"; watched: number; total: number } | null;
   pinned: boolean;
+  providers: string[];
 }
 
 export interface Season {
@@ -25,6 +26,7 @@ export interface Episode {
   title: string;
   runtime: number | null;
   watched: boolean;
+  providers: string[];
 }
 
 export interface TitleDetail extends Title {

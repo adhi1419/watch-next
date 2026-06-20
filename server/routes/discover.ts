@@ -2,15 +2,15 @@ import { queries } from "../db";
 import { enrichToTitles, enrichSearchResults } from "../status";
 import { searchTitles, fetchTitlesMeta, fetchSeasons } from "../justwatch";
 
-export async function getDiscover() {
+export async function getDiscover(allPlatforms = false) {
   const entries = queries.watchingTracking.all() as any[];
-  const titles = await enrichToTitles(entries, { includeWatchlistCheck: true });
+  const titles = await enrichToTitles(entries, { includeWatchlistCheck: true, allPlatforms });
   return titles.filter(t => t.tracking?.status === "watching");
 }
 
-export async function getHistory() {
+export async function getHistory(allPlatforms = false) {
   const entries = queries.allTrackingAlpha.all() as any[];
-  const titles = await enrichToTitles(entries, { includeWatchlistCheck: true });
+  const titles = await enrichToTitles(entries, { includeWatchlistCheck: true, allPlatforms });
   return titles.filter(t => t.tracking?.status === "completed" || t.tracking?.status === "stopped" || t.tracking?.status === "up_to_date");
 }
 
@@ -26,13 +26,14 @@ export async function getWatchlist() {
 
 export async function searchTitlesEndpoint(params: URLSearchParams) {
   const q = params.get("q") ?? undefined;
-  const sort = params.get("sort") ?? "IMDB_SCORE";
+  const sort = params.get("sort") ?? "POPULAR";
   const type = params.get("type") as "MOVIE" | "SHOW" | null;
   const genres = params.get("genres")?.split(",").filter(Boolean) ?? undefined;
   const cursor = params.get("cursor") ?? undefined;
   const excludeTracked = params.get("excludeTracked") === "true";
+  const allPlatforms = params.get("allPlatforms") === "true";
 
-  const result = await searchTitles({ query: q, sort, genres, cursor });
+  const result = await searchTitles({ query: q, sort, genres, cursor, allPlatforms });
 
   // Filter by type if specified
   let titles = result.titles;
@@ -62,7 +63,7 @@ export async function getTitleDetail(titleId: string) {
   const watchedEps = queries.episodesForTitle.all(titleId) as { season: number; episode: number }[];
   const watchedSet = new Set(watchedEps.map(e => `${e.season}-${e.episode}`));
 
-  // Build seasons with watched state
+  // Build seasons with watched state + providers
   const seasons = seasonsRaw.map(s => ({
     number: s.number,
     episodes: s.episodes.map(ep => ({
@@ -70,6 +71,7 @@ export async function getTitleDetail(titleId: string) {
       title: ep.title,
       runtime: ep.runtime,
       watched: watchedSet.has(`${s.number}-${ep.number}`),
+      providers: ep.providers,
     })),
   }));
 
@@ -109,6 +111,7 @@ export async function getTitleDetail(titleId: string) {
     ageRating: meta.ageRating,
     tracking,
     pinned: !!watchlistRow,
+    providers: meta.providers,
     seasons,
   };
 }

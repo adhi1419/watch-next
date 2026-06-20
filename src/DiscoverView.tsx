@@ -1,15 +1,13 @@
-import { useState, useEffect } from "react";
-import { useTracking } from "./context/TrackingContext";
+import { useQuery } from "@tanstack/react-query";
 import { useDiscover } from "./hooks/useDiscover";
 import { useWatchlist } from "./hooks/useWatchlist";
+import { useSelectedTitle } from "./hooks/useSelectedTitle";
+import { useMutations } from "./hooks/useMutations";
 import { getDiscover } from "./store";
-import { setStopWatching } from "./store";
 import Carousel from "./components/Carousel";
 import CatalogGrid from "./components/CatalogGrid";
 import DetailPanel from "./components/DetailPanel";
-import TitleCard from "./components/TitleCard";
 import { GENRE_MAP } from "./components/constants";
-import type { Title } from "./types";
 
 export { GENRE_MAP };
 
@@ -25,34 +23,23 @@ interface DiscoverViewProps {
   activeActor: string | null;
   setActiveActor: (v: string | null) => void;
   filterType: FilterType;
+  allPlatforms: boolean;
 }
 
-export default function DiscoverView({ search, setSearch, sortBy, activeGenres, setActiveGenres, activeActor, setActiveActor, filterType }: DiscoverViewProps) {
-  const tracking = useTracking();
-  const { items: watchlistItems, toggle: toggleWatchlist } = useWatchlist();
-  const [selected, setSelected] = useState<Title | null>(null);
-  const [currentlyWatching, setCurrentlyWatching] = useState<Title[]>([]);
-  const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
+export default function DiscoverView({ search, setSearch, sortBy, activeGenres, setActiveGenres, activeActor, setActiveActor, filterType, allPlatforms }: DiscoverViewProps) {
+  const { items: watchlistItems, ids: watchlistIds } = useWatchlist();
+  const { selected, selectedId, isLoading: panelLoading, select, close } = useSelectedTitle();
+  const mutations = useMutations();
 
-  useEffect(() => {
-    getDiscover().then(setCurrentlyWatching).catch(() => {});
-  }, []);
+  const { data: currentlyWatching = [] } = useQuery({ queryKey: ["discover", allPlatforms], queryFn: () => getDiscover(allPlatforms) });
 
   const { titles, loading, hasMore, loadMore, isSearchMode } = useDiscover({
-    search, sortBy, genres: activeGenres, filterType, activeActor,
+    search, sortBy, genres: activeGenres, filterType, activeActor, allPlatforms,
   });
 
-  const onSelect = async (t: Title) => {
-    if (selected?.id === t.id) { setSelected(null); return; }
-    setSelected(t);
-    await tracking.handleSelect(t);
-  };
-
   const handleStopWatching = async (id: string) => {
-    await setStopWatching(id);
-    setCurrentlyWatching(prev => prev.filter(t => t.id !== id));
-    setExcludedIds(prev => new Set(prev).add(id));
-    setSelected(null);
+    await mutations.stopWatching.mutateAsync(id);
+    close();
   };
 
   const handleGenreClick = (genre: string) => setActiveGenres(activeGenres.includes(genre) ? activeGenres.filter(g => g !== genre) : [...activeGenres, genre]);
@@ -67,48 +54,46 @@ export default function DiscoverView({ search, setSearch, sortBy, activeGenres, 
     <>
       {hasActiveFilters && (
         <div className="flex items-center gap-2 px-6 py-2 flex-wrap">
-          {activeGenres.map(g => <span key={g} className="px-3 py-1 rounded-full text-[0.8rem] bg-[rgba(229,9,20,0.2)] text-[var(--color-accent)] border border-[var(--color-accent)] cursor-pointer hover:opacity-70 transition-opacity" onClick={() => handleGenreClick(g)}>{GENRE_MAP[g] || g} ✕</span>)}
-          {activeActor && <span className="px-3 py-1 rounded-full text-[0.8rem] bg-[rgba(229,9,20,0.2)] text-[var(--color-accent)] border border-[var(--color-accent)] cursor-pointer hover:opacity-70 transition-opacity" onClick={() => setActiveActor(null)}>🎭 {activeActor} ✕</span>}
-          <button className="bg-transparent border-none text-[var(--color-muted)] text-[0.8rem] cursor-pointer underline" onClick={() => { setActiveGenres([]); setActiveActor(null); setSearch(""); }}>Clear all</button>
+          {activeGenres.map(g => <span key={g} className="px-3 py-1 rounded-full text-xs bg-[rgba(229,9,20,0.2)] text-[var(--color-accent)] border border-[var(--color-accent)] cursor-pointer hover:opacity-70" onClick={() => handleGenreClick(g)}>{GENRE_MAP[g] || g} ✕</span>)}
+          {activeActor && <span className="px-3 py-1 rounded-full text-xs bg-[rgba(229,9,20,0.2)] text-[var(--color-accent)] border border-[var(--color-accent)] cursor-pointer hover:opacity-70" onClick={() => setActiveActor(null)}>🎭 {activeActor} ✕</span>}
+          <button className="bg-transparent border-none text-[var(--color-muted)] text-xs cursor-pointer underline" onClick={() => { setActiveGenres([]); setActiveActor(null); setSearch(""); }}>Clear all</button>
         </div>
       )}
 
       {filterType === "SHOW" && !isSearchMode && carouselItems.length > 0 && (
-        <Carousel items={carouselItems} onSelect={(id) => {
-          const found = currentlyWatching.find(t => t.id === id);
-          if (found) onSelect(found);
-        }} />
+        <Carousel items={carouselItems} onSelect={(id) => select(id)} />
       )}
 
       <div>
         <h3 className="text-lg font-bold mb-2 px-4">{isSearchMode ? "Search Results" : "Watch Next"}</h3>
-        {!isSearchMode && watchlistItems.filter(w => w.type === filterType).length > 0 && (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(360px,1fr))] gap-5 px-6">
-            {watchlistItems.filter(w => w.type === filterType).map(w => (
-              <TitleCard key={w.id} title={w.title} posterUrl={w.posterUrl} objectType={w.type} isPinned onClick={() => onSelect(w)} />
-            ))}
-          </div>
-        )}
         <CatalogGrid
-          titles={titles.filter(t => !excludedIds.has(t.id))}
-          selectedId={selected?.id ?? null}
+          titles={[
+            ...(!isSearchMode ? watchlistItems.filter(w => w.type === filterType) : []),
+            ...titles,
+          ]}
+          selectedId={selectedId}
           loading={loading}
           hasMore={hasMore}
           onLoadMore={loadMore}
-          onSelect={onSelect}
+          onSelect={(t) => select(t.id)}
         />
       </div>
 
       {selected && (
         <DetailPanel
           selected={selected}
-          onClose={() => setSelected(null)}
-          onToggleWatchlist={toggleWatchlist}
+          onClose={close}
+          onToggleWatchlist={mutations.toggleWatchlist}
+          isInWatchlist={watchlistIds.has(selected.id)}
           onStopWatching={handleStopWatching}
           onGenreClick={handleGenreClick}
           onActorClick={handleActorClick}
-          onTrackingChanged={(id) => { setExcludedIds(prev => new Set(prev).add(id)); setSelected(null); }}
         />
+      )}
+      {panelLoading && selectedId && !selected && (
+        <aside className="fixed top-[var(--spacing-topbar)] right-0 bottom-0 w-[var(--spacing-panel)] bg-[rgba(30,30,30,0.92)] backdrop-blur-[20px] border-l border-white/8 flex items-center justify-center z-100">
+          <p className="text-[var(--color-muted)]">Loading...</p>
+        </aside>
       )}
     </>
   );

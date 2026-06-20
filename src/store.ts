@@ -10,8 +10,8 @@ export const setStopWatching = (titleId: string) => json("POST", `/api/tracking/
 export const setResumeWatching = (titleId: string) => json("POST", `/api/tracking/${encodeURIComponent(titleId)}/resume`);
 
 // Episodes
-export const markEpisodes = (titleId: string, episodes: { season: number; episode: number }[]) =>
-  json("POST", `/api/tracking/${encodeURIComponent(titleId)}/episodes`, { episodes });
+export const markEpisodes = (titleId: string, episodes: { season: number; episode: number }[], type?: string) =>
+  json("POST", `/api/tracking/${encodeURIComponent(titleId)}/episodes`, { episodes, type });
 export const unmarkEpisodes = (titleId: string, episodes: { season: number; episode: number }[]) =>
   json("DELETE", `/api/tracking/${encodeURIComponent(titleId)}/episodes`, { episodes });
 
@@ -20,6 +20,6 @@ export const addToWatchlist = (titleId: string, type: "MOVIE" | "SHOW") => json(
 export const removeFromWatchlist = (titleId: string) => json("DELETE", "/api/watchlist", { titleId });
 
 // Read endpoints
-export const getDiscover = (): Promise<Title[]> => fetch("/api/discover").then(r => r.json());
-export const getHistory = (): Promise<Title[]> => fetch("/api/history").then(r => r.json());
+export const getDiscover = (allPlatforms = false): Promise<Title[]> => fetch(`/api/discover${allPlatforms ? "?allPlatforms=true" : ""}`).then(r => r.json());
+export const getHistory = (allPlatforms = false): Promise<Title[]> => fetch(`/api/history${allPlatforms ? "?allPlatforms=true" : ""}`).then(r => r.json());
 export const getWatchlist = (): Promise<Title[]> => fetch("/api/watchlist").then(r => r.json());
