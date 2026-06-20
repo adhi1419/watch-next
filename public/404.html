@@ -1,0 +1,6 @@
+<!DOCTYPE html>
+<html><head><script>
+// SPA redirect for GitHub Pages — redirects all paths to index.html with path preserved
+const path = window.location.pathname.replace('/watch-next', '');
+window.location.replace('/watch-next/' + '?p=' + encodeURIComponent(path));
+</script></head></html>

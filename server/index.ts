@@ -26,12 +26,14 @@ const server = createServer(async (req, res) => {
     res.end(JSON.stringify(data));
   };
 
-  if (isDev) {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
-    if (req.method === "OPTIONS") { res.writeHead(204); return res.end(); }
-  }
+  // CORS — frontend is on a different origin (GitHub Pages in prod, localhost in dev)
+  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") ?? ["*"];
+  const origin = req.headers.origin || "*";
+  const corsOrigin = allowedOrigins.includes("*") ? "*" : (allowedOrigins.includes(origin) ? origin : allowedOrigins[0]);
+  res.setHeader("Access-Control-Allow-Origin", corsOrigin);
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
+  if (req.method === "OPTIONS") { res.writeHead(204); return res.end(); }
 
   const url = new URL(req.url!, `http://localhost:${PORT}`);
   const path = url.pathname;

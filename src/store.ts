@@ -1,6 +1,8 @@
 import { getIdToken } from "./firebase";
 import type { Title } from "./types";
 
+const API = import.meta.env.VITE_API_URL || "";
+
 async function authHeaders(): Promise<Record<string, string>> {
   const token = await getIdToken();
   return token ? { "Content-Type": "application/json", "Authorization": `Bearer ${token}` } : { "Content-Type": "application/json" };
@@ -17,22 +19,22 @@ async function authFetch(method: string, url: string, body?: any) {
 }
 
 // Tracking
-export const startTracking = (titleId: string, type: "MOVIE" | "SHOW") => authFetch("POST", "/api/tracking", { titleId, type });
-export const stopTracking = (titleId: string) => authFetch("DELETE", "/api/tracking", { titleId });
-export const setStopWatching = (titleId: string) => authFetch("POST", `/api/tracking/${encodeURIComponent(titleId)}/stop`);
-export const setResumeWatching = (titleId: string) => authFetch("POST", `/api/tracking/${encodeURIComponent(titleId)}/resume`);
+export const startTracking = (titleId: string, type: "MOVIE" | "SHOW") => authFetch("POST", `${API}/api/tracking`, { titleId, type });
+export const stopTracking = (titleId: string) => authFetch("DELETE", `${API}/api/tracking`, { titleId });
+export const setStopWatching = (titleId: string) => authFetch("POST", `${API}/api/tracking/${encodeURIComponent(titleId)}/stop`);
+export const setResumeWatching = (titleId: string) => authFetch("POST", `${API}/api/tracking/${encodeURIComponent(titleId)}/resume`);
 
 // Episodes
 export const markEpisodes = (titleId: string, episodes: { season: number; episode: number }[], type?: string) =>
-  authFetch("POST", `/api/tracking/${encodeURIComponent(titleId)}/episodes`, { episodes, type });
+  authFetch("POST", `${API}/api/tracking/${encodeURIComponent(titleId)}/episodes`, { episodes, type });
 export const unmarkEpisodes = (titleId: string, episodes: { season: number; episode: number }[]) =>
-  authFetch("DELETE", `/api/tracking/${encodeURIComponent(titleId)}/episodes`, { episodes });
+  authFetch("DELETE", `${API}/api/tracking/${encodeURIComponent(titleId)}/episodes`, { episodes });
 
 // Watchlist
-export const addToWatchlist = (titleId: string, type: "MOVIE" | "SHOW") => authFetch("POST", "/api/watchlist", { titleId, type });
-export const removeFromWatchlist = (titleId: string) => authFetch("DELETE", "/api/watchlist", { titleId });
+export const addToWatchlist = (titleId: string, type: "MOVIE" | "SHOW") => authFetch("POST", `${API}/api/watchlist`, { titleId, type });
+export const removeFromWatchlist = (titleId: string) => authFetch("DELETE", `${API}/api/watchlist`, { titleId });
 
 // Read endpoints
-export const getDiscover = (allPlatforms = false): Promise<Title[]> => authFetch("GET", `/api/discover${allPlatforms ? "?allPlatforms=true" : ""}`);
-export const getHistory = (allPlatforms = false): Promise<Title[]> => authFetch("GET", `/api/history${allPlatforms ? "?allPlatforms=true" : ""}`);
-export const getWatchlist = (): Promise<Title[]> => authFetch("GET", "/api/watchlist");
+export const getDiscover = (allPlatforms = false): Promise<Title[]> => authFetch("GET", `${API}/api/discover${allPlatforms ? "?allPlatforms=true" : ""}`);
+export const getHistory = (allPlatforms = false): Promise<Title[]> => authFetch("GET", `${API}/api/history${allPlatforms ? "?allPlatforms=true" : ""}`);
+export const getWatchlist = (): Promise<Title[]> => authFetch("GET", `${API}/api/watchlist`);

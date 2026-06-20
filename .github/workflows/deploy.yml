@@ -1,4 +1,4 @@
-name: Deploy to Cloud Run
+name: Deploy
 
 on:
   push:
@@ -15,9 +15,33 @@ env:
   IMAGE: europe-west3-docker.pkg.dev/watch-next-500021/watch-next/watch-next
 
 jobs:
-  deploy:
+  frontend:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - run: bun run build
+        env:
+          VITE_FIREBASE_API_KEY: AIzaSyBG3i2KLxYvgaYd0r08Kf9fzHmXBongNUQ
+          VITE_FIREBASE_AUTH_DOMAIN: watch-next-500021.firebaseapp.com
+          VITE_FIREBASE_PROJECT_ID: watch-next-500021
+          VITE_API_URL: https://watch-next-547004818963.europe-west3.run.app
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: deploy
+        uses: actions/deploy-pages@v4
 
+  backend:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -37,22 +61,16 @@ jobs:
             --format='value(id)')
 
           echo "Build started: $BUILD_ID"
-          echo "Waiting for build to complete..."
-
-          if ! gcloud builds log "$BUILD_ID" --region=${{ env.REGION }} --stream 2>/dev/null; then
-            while true; do
-              STATUS=$(gcloud builds describe "$BUILD_ID" --region=${{ env.REGION }} --format='value(status)')
-              if [[ "$STATUS" == "SUCCESS" ]]; then
-                echo "✅ Build succeeded"
-                break
-              elif [[ "$STATUS" == "FAILURE" || "$STATUS" == "TIMEOUT" || "$STATUS" == "CANCELLED" ]]; then
-                echo "❌ Build failed with status: $STATUS"
-                echo "🔗 Logs: https://console.cloud.google.com/cloud-build/builds;region=${{ env.REGION }}/$BUILD_ID?project=${{ env.PROJECT_ID }}"
-                exit 1
-              fi
-              sleep 10
-            done
-          fi
+          while true; do
+            STATUS=$(gcloud builds describe "$BUILD_ID" --region=${{ env.REGION }} --format='value(status)' 2>/dev/null)
+            if [[ "$STATUS" == "SUCCESS" ]]; then echo "✅ Build succeeded"; break; fi
+            if [[ "$STATUS" == "FAILURE" || "$STATUS" == "TIMEOUT" || "$STATUS" == "CANCELLED" ]]; then
+              echo "❌ Build failed: $STATUS"
+              echo "🔗 https://console.cloud.google.com/cloud-build/builds;region=${{ env.REGION }}/$BUILD_ID?project=${{ env.PROJECT_ID }}"
+              exit 1
+            fi
+            sleep 10
+          done
 
       - name: Deploy to Cloud Run
         run: |
@@ -62,4 +80,4 @@ jobs:
             --project=${{ env.PROJECT_ID }} \
             --allow-unauthenticated \
             --min-instances=1 \
-            --set-env-vars=NODE_ENV=production
+            --set-env-vars=NODE_ENV=production,ALLOWED_ORIGINS=https://adhi1419.github.io

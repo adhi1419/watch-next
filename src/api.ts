@@ -1,6 +1,8 @@
 import { getIdToken } from "./firebase";
 import type { Title, TitleDetail } from "./types";
 
+const API = import.meta.env.VITE_API_URL || "";
+
 interface SearchResult {
   titles: Title[];
   cursor: string | null;
@@ -30,13 +32,13 @@ export async function fetchTitles(opts: {
   if (opts.excludeTracked) params.set("excludeTracked", "true");
   if (opts.allPlatforms) params.set("allPlatforms", "true");
 
-  const resp = await fetch(`/api/titles?${params}`, { headers: await authHeaders() });
+  const resp = await fetch(`${API}/api/titles?${params}`, { headers: await authHeaders() });
   if (!resp.ok) throw new Error(`Search failed: ${resp.status}`);
   return resp.json();
 }
 
 export async function fetchTitleDetail(id: string): Promise<TitleDetail> {
-  const resp = await fetch(`/api/titles/${encodeURIComponent(id)}`, { headers: await authHeaders() });
+  const resp = await fetch(`${API}/api/titles/${encodeURIComponent(id)}`, { headers: await authHeaders() });
   if (!resp.ok) throw new Error(`Title detail failed: ${resp.status}`);
   return resp.json();
 }
