@@ -14,7 +14,7 @@ export default function App() {
   if (!user) return <LoginScreen onSignIn={signIn} />;
 
   return (
-    <Router>
+    <Router base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
       <AppShell user={user} onSignOut={signOut} />
     </Router>
   );
