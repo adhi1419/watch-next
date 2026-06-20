@@ -1,0 +1,108 @@
+import { queries } from "../db";
+import { enrichToTitles, enrichSearchResults } from "../status";
+import { searchTitles, fetchTitlesMeta, fetchSeasons } from "../justwatch";
+
+export async function getDiscover() {
+  const entries = queries.watchingTracking.all() as any[];
+  const titles = await enrichToTitles(entries, { includeWatchlistCheck: true });
+  return titles.filter(t => t.tracking?.status === "watching");
+}
+
+export async function getHistory() {
+  const entries = queries.allTrackingAlpha.all() as any[];
+  const titles = await enrichToTitles(entries, { includeWatchlistCheck: true });
+  return titles.filter(t => t.tracking?.status === "completed" || t.tracking?.status === "stopped");
+}
+
+export async function getWatchlist() {
+  const entries = queries.allWatchlist.all() as { titleId: string; type: string }[];
+  const enriched = await enrichToTitles(
+    entries.map(e => ({ ...e, status: undefined })),
+    { includeWatchlistCheck: false }
+  );
+  // Mark all as pinned (they're from watchlist table)
+  return enriched.map(t => ({ ...t, pinned: true }));
+}
+
+export async function searchTitlesEndpoint(params: URLSearchParams) {
+  const q = params.get("q") ?? undefined;
+  const sort = params.get("sort") ?? "IMDB_SCORE";
+  const type = params.get("type") as "MOVIE" | "SHOW" | null;
+  const genres = params.get("genres")?.split(",").filter(Boolean) ?? undefined;
+  const cursor = params.get("cursor") ?? undefined;
+
+  const result = await searchTitles({ query: q, sort, genres, cursor });
+
+  // Filter by type if specified
+  let titles = result.titles;
+  if (type) titles = titles.filter(t => t.type === type);
+
+  // Enrich with tracking/watchlist state
+  const enriched = await enrichSearchResults(titles);
+
+  return { titles: enriched, cursor: result.cursor, hasMore: result.hasMore };
+}
+
+export async function getTitleDetail(titleId: string) {
+  // Fetch metadata
+  const metaMap = await fetchTitlesMeta([titleId]);
+  const meta = metaMap.get(titleId);
+  if (!meta) return null;
+
+  // Fetch seasons
+  const seasonsRaw = meta.type === "SHOW" ? await fetchSeasons(titleId) : [];
+
+  // Get watched episodes from DB
+  const watchedEps = queries.episodesForTitle.all(titleId) as { season: number; episode: number }[];
+  const watchedSet = new Set(watchedEps.map(e => `${e.season}-${e.episode}`));
+
+  // Build seasons with watched state
+  const seasons = seasonsRaw.map(s => ({
+    number: s.number,
+    episodes: s.episodes.map(ep => ({
+      number: ep.number,
+      title: ep.title,
+      runtime: ep.runtime,
+      watched: watchedSet.has(`${s.number}-${ep.number}`),
+    })),
+  }));
+
+  // Get tracking state
+  const trackingRow = queries.getTracking.get(titleId) as { titleId: string } | null;
+  const totalEpisodes = meta.type === "MOVIE" ? 1 : seasons.reduce((sum, s) => sum + s.episodes.length, 0);
+  const watchedCount = watchedEps.length;
+
+  // Watchlist check
+  const watchlistRow = queries.getWatchlist.get(titleId);
+
+  // Derive status
+  let tracking = null;
+  if (trackingRow) {
+    const allTracking = queries.allTracking.all() as any[];
+    const entry = allTracking.find((e: any) => e.titleId === titleId);
+    const storedStatus = entry?.status ?? "watching";
+    let status: "watching" | "completed" | "stopped" = "watching";
+    if (storedStatus === "stopped") status = "stopped";
+    else if (totalEpisodes > 0 && watchedCount >= totalEpisodes) status = "completed";
+    else if (totalEpisodes === 0 && watchedCount > 0) status = "completed";
+    tracking = { status, watched: watchedCount, total: totalEpisodes };
+  }
+
+  return {
+    id: meta.id,
+    type: meta.type,
+    title: meta.title,
+    year: meta.year,
+    synopsis: meta.synopsis,
+    posterUrl: meta.posterUrl,
+    genres: meta.genres,
+    scores: meta.scores,
+    runtime: meta.runtime,
+    seasonCount: meta.seasonCount,
+    cast: meta.cast,
+    ageRating: meta.ageRating,
+    tracking,
+    pinned: !!watchlistRow,
+    seasons,
+  };
+}
