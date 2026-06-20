@@ -60,7 +60,6 @@ export default function HistoryView({ filterType }: HistoryViewProps) {
             isStopped={item.tracking?.status === "stopped"}
             isSelected={selected?.id === item.id}
             progress={item.tracking ? { watched: item.tracking.watched, total: item.tracking.total } : undefined}
-            ribbonProgress
             onClick={() => onSelect(item)}
           />
         ))}

@@ -12,6 +12,7 @@ export async function fetchTitles(opts: {
   genres?: string[];
   type?: "MOVIE" | "SHOW";
   cursor?: string | null;
+  excludeTracked?: boolean;
 }): Promise<SearchResult> {
   const params = new URLSearchParams();
   if (opts.query) params.set("q", opts.query);
@@ -19,6 +20,7 @@ export async function fetchTitles(opts: {
   if (opts.genres?.length) params.set("genres", opts.genres.join(","));
   if (opts.type) params.set("type", opts.type);
   if (opts.cursor) params.set("cursor", opts.cursor);
+  if (opts.excludeTracked) params.set("excludeTracked", "true");
 
   const resp = await fetch(`/api/titles?${params}`);
   if (!resp.ok) throw new Error(`Search failed: ${resp.status}`);

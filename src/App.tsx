@@ -63,23 +63,23 @@ export default function App() {
           </div>
           {/* Pill Toggle - TV/Movie */}
           <div className="relative inline-flex bg-white/5 backdrop-blur-[12px] border border-white/10 rounded-full p-[3px] shrink-0">
-            <div className={`absolute top-[3px] bottom-[3px] w-[calc(50%-3px)] bg-[var(--color-accent)] rounded-full transition-transform duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] ${filterType === "MOVIE" ? "translate-x-[calc(100%+2px)]" : "translate-x-[2px]"}`} />
-            <button className={`relative z-1 px-4 py-1 border-none bg-transparent text-[0.85rem] font-medium cursor-pointer rounded-full transition-colors flex-1 text-center whitespace-nowrap leading-none ${filterType === "SHOW" ? "text-white" : "text-[var(--color-muted)]"}`} onClick={() => setFilterType("SHOW")}>TV Shows</button>
-            <button className={`relative z-1 px-4 py-1 border-none bg-transparent text-[0.85rem] font-medium cursor-pointer rounded-full transition-colors flex-1 text-center whitespace-nowrap leading-none ${filterType === "MOVIE" ? "text-white" : "text-[var(--color-muted)]"}`} onClick={() => setFilterType("MOVIE")}>Movies</button>
+            <div className={`absolute inset-[3px] rounded-full bg-[var(--color-accent)] transition-transform duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] w-[calc(50%-3px)] ${filterType === "MOVIE" ? "left-auto right-[3px]" : ""}`} />
+            <button className={`relative z-1 px-4 py-1.5 border-none bg-transparent text-sm font-medium cursor-pointer rounded-full transition-colors flex-1 text-center leading-tight ${filterType === "SHOW" ? "text-white" : "text-[var(--color-muted)]"}`} onClick={() => setFilterType("SHOW")}>TV Shows</button>
+            <button className={`relative z-1 px-4 py-1.5 border-none bg-transparent text-sm font-medium cursor-pointer rounded-full transition-colors flex-1 text-center leading-tight ${filterType === "MOVIE" ? "text-white" : "text-[var(--color-muted)]"}`} onClick={() => setFilterType("MOVIE")}>Movies</button>
           </div>
         </nav>
 
-        {/* View Tabs */}
-        <div className="sticky top-[60px] z-50 backdrop-blur-[20px] backdrop-saturate-150 bg-[rgba(30,30,30,0.5)] border-b border-white/8 flex justify-center py-2 px-4">
-          <div className="relative inline-flex bg-white/5 border border-white/10 rounded-full p-[3px]">
-            <div className={`absolute top-[3px] bottom-[3px] w-[calc(50%-3px)] bg-[var(--color-accent)] rounded-full transition-transform duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] ${view === "history" ? "translate-x-[calc(100%+2px)]" : "translate-x-[2px]"}`} />
-            <button className={`relative z-1 px-6 py-1.5 border-none bg-transparent text-[0.9rem] font-medium cursor-pointer rounded-full transition-colors ${view === "discover" ? "text-white" : "text-[var(--color-muted)]"}`} onClick={() => setView("discover")}>Discover</button>
-            <button className={`relative z-1 px-6 py-1.5 border-none bg-transparent text-[0.9rem] font-medium cursor-pointer rounded-full transition-colors ${view === "history" ? "text-white" : "text-[var(--color-muted)]"}`} onClick={() => setView("history")}>History</button>
-          </div>
-        </div>
-
         {/* Main Content */}
         <main className="main-scroll flex-1 overflow-y-auto pb-6">
+          {/* View Tabs - floating over content */}
+          <div className="sticky top-0 z-50 flex justify-center py-2 px-4 -mb-[44px] pointer-events-none">
+            <div className="relative inline-flex pointer-events-auto backdrop-blur-[24px] backdrop-saturate-[1.8] bg-white/[0.07] border-2 border-white/25 rounded-full p-[3px] shadow-[0_4px_24px_rgba(0,0,0,0.5)]">
+              <div className={`absolute top-[3px] bottom-[3px] w-[calc(50%-3px)] bg-[var(--color-accent)] rounded-full transition-transform duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] ${view === "history" ? "translate-x-[calc(100%+2px)]" : "translate-x-[2px]"}`} />
+              <button className={`relative z-1 px-6 py-1.5 border-none bg-transparent text-[0.9rem] font-bold cursor-pointer rounded-full transition-colors ${view === "discover" ? "text-white" : "text-white/60"}`} onClick={() => setView("discover")}>Discover</button>
+              <button className={`relative z-1 px-6 py-1.5 border-none bg-transparent text-[0.9rem] font-bold cursor-pointer rounded-full transition-colors ${view === "history" ? "text-white" : "text-white/60"}`} onClick={() => setView("history")}>History</button>
+            </div>
+          </div>
+
           {view === "discover" && (
             <DiscoverView search={search} setSearch={setSearch} sortBy={sortBy} activeGenres={activeGenres} setActiveGenres={setActiveGenres} activeActor={activeActor} setActiveActor={setActiveActor} filterType={filterType} />
           )}

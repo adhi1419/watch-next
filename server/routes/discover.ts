@@ -30,6 +30,7 @@ export async function searchTitlesEndpoint(params: URLSearchParams) {
   const type = params.get("type") as "MOVIE" | "SHOW" | null;
   const genres = params.get("genres")?.split(",").filter(Boolean) ?? undefined;
   const cursor = params.get("cursor") ?? undefined;
+  const excludeTracked = params.get("excludeTracked") === "true";
 
   const result = await searchTitles({ query: q, sort, genres, cursor });
 
@@ -40,7 +41,12 @@ export async function searchTitlesEndpoint(params: URLSearchParams) {
   // Enrich with tracking/watchlist state
   const enriched = await enrichSearchResults(titles);
 
-  return { titles: enriched, cursor: result.cursor, hasMore: result.hasMore };
+  // Optionally exclude tracked/pinned titles
+  const filtered = excludeTracked
+    ? enriched.filter(t => !t.tracking && !t.pinned)
+    : enriched;
+
+  return { titles: filtered, cursor: result.cursor, hasMore: result.hasMore };
 }
 
 export async function getTitleDetail(titleId: string) {

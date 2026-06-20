@@ -34,6 +34,7 @@ export function useDiscover({ search, sortBy, genres, filterType, activeActor }:
         genres: genres.length ? genres : undefined,
         type: isSearchMode ? undefined : filterType,
         cursor: pageCursor,
+        excludeTracked: !isSearchMode,
       });
       setTitles(prev => pageCursor ? [...prev, ...result.titles] : result.titles);
       setCursor(result.cursor);

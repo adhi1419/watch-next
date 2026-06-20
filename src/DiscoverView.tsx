@@ -90,13 +90,12 @@ export default function DiscoverView({ search, setSearch, sortBy, activeGenres, 
           </div>
         )}
         <CatalogGrid
-          titles={titles.filter(t => !t.tracking && !t.pinned && !excludedIds.has(t.id))}
+          titles={titles.filter(t => !excludedIds.has(t.id))}
           selectedId={selected?.id ?? null}
           loading={loading}
           hasMore={hasMore}
           onLoadMore={loadMore}
           onSelect={onSelect}
-          isSearchMode={isSearchMode}
         />
       </div>
 
