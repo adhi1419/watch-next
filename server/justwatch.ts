@@ -38,12 +38,7 @@ const NODES_QUERY = `query($ids: [ID!]!) {
   nodes(ids: $ids) {
     id
     ... on MovieOrShowOrSeasonOrEpisode { objectType }
-    ... on Show { totalSeasonCount seasons {
-      episodes {
-        id
-        offers(country: "DE", platform: WEB, filter: { packages: ["nfx"] }) { id }
-      }
-    } }
+    ... on Show { totalSeasonCount seasons { episodes { id } } }
     ... on MovieOrShow {
       content(country: "DE", language: "en") {
         title originalReleaseYear shortDescription posterUrl runtime ageCertification
@@ -57,7 +52,7 @@ const NODES_QUERY = `query($ids: [ID!]!) {
 
 function parseNode(node: any): TitleMeta {
   const c = node.content ?? {};
-  const totalEpisodes = (node.seasons ?? []).reduce((sum: number, s: any) => sum + (s.episodes ?? []).filter((e: any) => e.offers?.length > 0).length, 0);
+  const totalEpisodes = (node.seasons ?? []).reduce((sum: number, s: any) => sum + (s.episodes?.length ?? 0), 0);
   return {
     id: node.id,
     type: mapType(node.objectType),
