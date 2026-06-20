@@ -23,6 +23,7 @@ export default function App() {
 function AppShell({ user, onSignOut }: { user: any; onSignOut: () => void }) {
   const { view, filterType, sort, genres, push } = useUrlState();
   const [showFilters, setShowFilters] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [activeActor, setActiveActor] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [allPlatforms, setAllPlatforms] = useState(false);
@@ -40,6 +41,15 @@ function AppShell({ user, onSignOut }: { user: any; onSignOut: () => void }) {
     document.addEventListener('click', handler);
     return () => document.removeEventListener('click', handler);
   }, [showFilters]);
+
+  useEffect(() => {
+    if (!showUserMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest('[data-usermenu]')) setShowUserMenu(false);
+    };
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, [showUserMenu]);
 
   return (
     <div className="flex flex-col h-screen">
@@ -87,10 +97,19 @@ function AppShell({ user, onSignOut }: { user: any; onSignOut: () => void }) {
             <button className={`relative z-1 px-3 py-1.5 border-none bg-transparent cursor-pointer rounded-full transition-colors ${filterType === "MOVIE" ? "text-white" : "text-[var(--color-muted)]"}`} onClick={() => push({ filterType: "MOVIE" })} title="Movies"><Film size={16} /></button>
           </div>
         </div>
-        <button onClick={onSignOut} className="ml-3 shrink-0 flex items-center gap-2 bg-transparent border-none cursor-pointer text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors" title="Sign out">
-          {user.photoURL && <img src={user.photoURL} alt="" className="w-7 h-7 rounded-full" />}
-          <LogOut size={16} />
-        </button>
+        <div className="ml-3 shrink-0 relative" data-usermenu>
+          <button onClick={() => setShowUserMenu(prev => !prev)} className="flex items-center bg-transparent border-none cursor-pointer">
+            {user.photoURL && <img src={user.photoURL} alt="" className="w-8 h-8 rounded-full hover:ring-2 hover:ring-white/20 transition-all" />}
+          </button>
+          {showUserMenu && (
+            <div className="absolute top-full right-0 mt-2 bg-[rgba(30,30,30,0.95)] backdrop-blur-[16px] border border-white/10 rounded-xl p-1 min-w-36 z-200">
+              <div className="px-3 py-2 text-xs text-[var(--color-muted)] border-b border-white/8">{user.email}</div>
+              <button onClick={onSignOut} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--color-text)] bg-transparent border-none cursor-pointer rounded-lg hover:bg-white/5 transition-colors">
+                <LogOut size={14} /> Sign out
+              </button>
+            </div>
+          )}
+        </div>
       </nav>
 
       {/* Main Content */}
