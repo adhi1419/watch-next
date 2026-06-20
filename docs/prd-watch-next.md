@@ -138,13 +138,17 @@ npx vite
 # URL: https://watch-next-547004818963.europe-west3.run.app
 ```
 
-## Future Stories
+## Backlog
 
-| Story | Status |
-|-------|--------|
-| Additional providers (Disney+, etc.) | Ready (add to PLATFORMS array) |
-| User preferences (platform selection per user) | Planned |
-| Data export/import | Planned |
-| Ratings & notes on completed titles | Planned |
-| Mobile responsive layout | Planned |
-| Custom domain | Planned |
+| # | Feature | Type | Effort |
+|---|---------|------|--------|
+| 1 | Mobile responsive layout | UI | M |
+| 2 | History tab stats (watched count, total watch time) | Feature | S |
+| 3 | Bug: Watchlist tiles missing rating/year/metadata | Bug | S |
+| 4 | User preferences for platform selection (per-user, not hardcoded) | Feature | M |
+| 5 | Bug: Hide carousel scroll button when not enough titles | Bug | XS |
+| 6 | Personal star rating on titles | Feature | S |
+| 7 | Recommendation engine (weighted by watch history + user ratings) | Feature | L |
+| 8 | Migrate backend to Rust | Infra | XL |
+| 9 | Richer catalog APIs (IMDB enrichment, multiple sources) | Feature | L |
+| 10 | Sub-categories (documentaries, anime, short films) | Feature | M |
