@@ -1,20 +1,21 @@
-import { queries } from "../db";
+import { userDb } from "../firestore";
 import { readJSON, requireFields, ValidationError } from "../validate";
 import type { IncomingMessage } from "node:http";
 
-export async function postWatchlist(req: IncomingMessage) {
+export async function postWatchlist(uid: string, req: IncomingMessage) {
   const body = await readJSON(req);
   requireFields(body, ["titleId", "type"]);
   if (!["MOVIE", "SHOW"].includes(body.type)) throw new ValidationError("type must be MOVIE or SHOW");
-  const inTracking = queries.getTracking.get(body.titleId);
+  const db = userDb(uid);
+  const inTracking = await db.getTracking(body.titleId);
   if (inTracking) throw new ValidationError("Title is being tracked — stop tracking before adding to watchlist");
-  queries.insertWatchlist.run(body.titleId, body.type);
+  await db.insertWatchlist(body.titleId, body.type);
   return { ok: true };
 }
 
-export async function deleteWatchlist(req: IncomingMessage) {
+export async function deleteWatchlist(uid: string, req: IncomingMessage) {
   const { titleId } = await readJSON(req);
   requireFields({ titleId }, ["titleId"]);
-  queries.deleteWatchlist.run(titleId);
+  await userDb(uid).deleteWatchlist(titleId);
   return { ok: true };
 }

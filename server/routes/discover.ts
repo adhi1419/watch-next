@@ -1,30 +1,26 @@
-import { queries } from "../db";
+import { userDb } from "../firestore";
 import { enrichToTitles, enrichSearchResults, deriveStatus } from "../status";
 import { searchTitles, fetchTitlesMeta, fetchSeasons } from "../justwatch";
 
-export async function getDiscover(allPlatforms = false) {
-  const entries = queries.watchingTracking.all() as any[];
-  const titles = await enrichToTitles(entries, { includeWatchlistCheck: true, allPlatforms });
+export async function getDiscover(uid: string, allPlatforms = false) {
+  const entries = await userDb(uid).watchingTracking();
+  const titles = await enrichToTitles(uid, entries as any[], { includeWatchlistCheck: true, allPlatforms });
   return titles.filter(t => t.tracking?.status === "watching");
 }
 
-export async function getHistory(allPlatforms = false) {
-  const entries = queries.allTrackingAlpha.all() as any[];
-  const titles = await enrichToTitles(entries, { includeWatchlistCheck: true, allPlatforms });
+export async function getHistory(uid: string, allPlatforms = false) {
+  const entries = await userDb(uid).allTrackingAlpha();
+  const titles = await enrichToTitles(uid, entries as any[], { includeWatchlistCheck: true, allPlatforms });
   return titles.filter(t => t.tracking?.status === "completed" || t.tracking?.status === "stopped" || t.tracking?.status === "up_to_date");
 }
 
-export async function getWatchlist() {
-  const entries = queries.allWatchlist.all() as { titleId: string; type: string }[];
-  const enriched = await enrichToTitles(
-    entries.map(e => ({ ...e, status: undefined })),
-    { includeWatchlistCheck: false }
-  );
-  // Mark all as pinned (they're from watchlist table)
+export async function getWatchlist(uid: string) {
+  const entries = await userDb(uid).allWatchlist();
+  const enriched = await enrichToTitles(uid, (entries as any[]).map(e => ({ ...e, status: undefined })), { includeWatchlistCheck: false });
   return enriched.map(t => ({ ...t, pinned: true }));
 }
 
-export async function searchTitlesEndpoint(params: URLSearchParams) {
+export async function searchTitlesEndpoint(uid: string, params: URLSearchParams) {
   const q = params.get("q") ?? undefined;
   const sort = params.get("sort") ?? "POPULAR";
   const type = params.get("type") as "MOVIE" | "SHOW" | null;
@@ -34,80 +30,47 @@ export async function searchTitlesEndpoint(params: URLSearchParams) {
   const allPlatforms = params.get("allPlatforms") === "true";
 
   const result = await searchTitles({ query: q, sort, genres, cursor, allPlatforms });
-
-  // Filter by type if specified
   let titles = result.titles;
   if (type) titles = titles.filter(t => t.type === type);
-
-  // Enrich with tracking/watchlist state
-  const enriched = await enrichSearchResults(titles);
-
-  // Optionally exclude tracked/pinned titles
-  const filtered = excludeTracked
-    ? enriched.filter(t => !t.tracking && !t.pinned)
-    : enriched;
-
+  const enriched = await enrichSearchResults(uid, titles);
+  const filtered = excludeTracked ? enriched.filter(t => !t.tracking && !t.pinned) : enriched;
   return { titles: filtered, cursor: result.cursor, hasMore: result.hasMore };
 }
 
-export async function getTitleDetail(titleId: string) {
-  // Fetch metadata
+export async function getTitleDetail(uid: string, titleId: string) {
   const metaMap = await fetchTitlesMeta([titleId]);
   const meta = metaMap.get(titleId);
   if (!meta) return null;
 
-  // Fetch seasons
+  const db = userDb(uid);
   const seasonsRaw = meta.type === "SHOW" ? await fetchSeasons(titleId) : [];
-
-  // Get watched episodes from DB
-  const watchedEps = queries.episodesForTitle.all(titleId) as { season: number; episode: number }[];
+  const watchedEps = await db.episodesForTitle(titleId);
   const watchedSet = new Set(watchedEps.map(e => `${e.season}-${e.episode}`));
 
-  // Build seasons with watched state + providers
   const seasons = seasonsRaw.map(s => ({
     number: s.number,
     episodes: s.episodes.map(ep => ({
-      number: ep.number,
-      title: ep.title,
-      runtime: ep.runtime,
+      number: ep.number, title: ep.title, runtime: ep.runtime,
       watched: watchedSet.has(`${s.number}-${ep.number}`),
       providers: ep.providers,
     })),
   }));
 
-  // Get tracking state
-  const trackingRow = queries.getTracking.get(titleId) as { titleId: string } | null;
+  const trackingRow = await db.getTracking(titleId);
   const totalEpisodes = meta.type === "MOVIE" ? 1 : seasons.reduce((sum, s) => sum + s.episodes.length, 0);
   const watchedCount = watchedEps.length;
+  const watchlistRow = await db.getWatchlist(titleId);
 
-  // Watchlist check
-  const watchlistRow = queries.getWatchlist.get(titleId);
-
-  // Derive status
   let tracking = null;
   if (trackingRow) {
-    const entry = queries.getTrackingFull.get(titleId) as { status: string } | null;
-    const storedStatus = entry?.status ?? "watching";
-    const status = deriveStatus(watchedCount, totalEpisodes, storedStatus);
-    tracking = { status, watched: watchedCount, total: totalEpisodes };
+    const storedStatus = (trackingRow as any).status ?? "watching";
+    tracking = { status: deriveStatus(watchedCount, totalEpisodes, storedStatus), watched: watchedCount, total: totalEpisodes };
   }
 
   return {
-    id: meta.id,
-    type: meta.type,
-    title: meta.title,
-    year: meta.year,
-    synopsis: meta.synopsis,
-    posterUrl: meta.posterUrl,
-    genres: meta.genres,
-    scores: meta.scores,
-    runtime: meta.runtime,
-    seasonCount: meta.seasonCount,
-    cast: meta.cast,
-    ageRating: meta.ageRating,
-    tracking,
-    pinned: !!watchlistRow,
-    providers: meta.providers,
-    seasons,
+    id: meta.id, type: meta.type, title: meta.title, year: meta.year, synopsis: meta.synopsis,
+    posterUrl: meta.posterUrl, genres: meta.genres, scores: meta.scores, runtime: meta.runtime,
+    seasonCount: meta.seasonCount, cast: meta.cast, ageRating: meta.ageRating,
+    tracking, pinned: !!watchlistRow, providers: meta.providers, seasons,
   };
 }

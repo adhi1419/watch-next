@@ -25,3 +25,7 @@ dist-ssr
 
 # Database
 watched.db
+
+# Environment
+.env
+.env.local
