@@ -6,16 +6,25 @@ A personal streaming discovery and tracking app. Browse multi-provider catalogs 
 
 ## Architecture
 
+### Deployment Model
+
+Frontend and backend are **independently deployable**. The API is a standalone HTTP service — it could be rewritten in any language (Rust, Go, etc.) without touching the client. The contract is HTTP/JSON.
+
+```
+Frontend (GitHub Pages, CDN)  ──────►  Backend API (Cloud Run)  ──────►  Firestore + JustWatch
+```
+
 ### Stack
 
 | Layer | Tech |
 |-------|------|
 | Frontend | React 19, TypeScript, Vite 8, Tailwind CSS, TanStack Query, wouter, Lucide |
-| Backend | Bun, TypeScript, node:http |
+| Backend | Bun, TypeScript, node:http (replaceable) |
 | Database | Firestore (per-user collections) |
 | Auth | Firebase Authentication (Google sign-in) |
-| Hosting | Cloud Run (europe-west3), Artifact Registry, Cloud Build |
-| CI/CD | GitHub Actions → Cloud Build → Cloud Run |
+| Frontend Hosting | GitHub Pages (global CDN) |
+| Backend Hosting | Cloud Run (europe-west3, scales to zero) |
+| CI/CD | GitHub Actions (parallel: Pages + Cloud Build → Cloud Run) |
 | Data Source | JustWatch GraphQL API |
 
 ### Backend Modules (`server/`)
