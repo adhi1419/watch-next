@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   PROJECT_ID: watch-next-500021
   REGION: europe-west3
@@ -23,9 +27,32 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
-      - name: Build and push via Cloud Build
+      - name: Build and push
         run: |
-          gcloud builds submit --tag=${{ env.IMAGE }}:${{ github.sha }} --project=${{ env.PROJECT_ID }} --region=${{ env.REGION }}
+          BUILD_ID=$(gcloud builds submit \
+            --tag=${{ env.IMAGE }}:${{ github.sha }} \
+            --project=${{ env.PROJECT_ID }} \
+            --region=${{ env.REGION }} \
+            --async \
+            --format='value(id)')
+
+          echo "Build started: $BUILD_ID"
+          echo "Waiting for build to complete..."
+
+          if ! gcloud builds log "$BUILD_ID" --region=${{ env.REGION }} --stream 2>/dev/null; then
+            while true; do
+              STATUS=$(gcloud builds describe "$BUILD_ID" --region=${{ env.REGION }} --format='value(status)')
+              if [[ "$STATUS" == "SUCCESS" ]]; then
+                echo "✅ Build succeeded"
+                break
+              elif [[ "$STATUS" == "FAILURE" || "$STATUS" == "TIMEOUT" || "$STATUS" == "CANCELLED" ]]; then
+                echo "❌ Build failed with status: $STATUS"
+                echo "🔗 Logs: https://console.cloud.google.com/cloud-build/builds;region=${{ env.REGION }}/$BUILD_ID?project=${{ env.PROJECT_ID }}"
+                exit 1
+              fi
+              sleep 10
+            done
+          fi
 
       - name: Deploy to Cloud Run
         run: |
