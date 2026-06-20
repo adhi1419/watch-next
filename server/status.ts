@@ -21,7 +21,7 @@ export interface Title {
   providers: string[];
 }
 
-function deriveStatus(watched: number, total: number, storedStatus: string, available?: number): DerivedStatus {
+export function deriveStatus(watched: number, total: number, storedStatus: string, available?: number): DerivedStatus {
   if (storedStatus === "stopped") return "stopped";
   if (total > 0 && watched >= total) return "completed";
   if (total === 0 && watched > 0) return "completed";

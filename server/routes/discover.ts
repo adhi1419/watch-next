@@ -1,5 +1,5 @@
 import { queries } from "../db";
-import { enrichToTitles, enrichSearchResults } from "../status";
+import { enrichToTitles, enrichSearchResults, deriveStatus } from "../status";
 import { searchTitles, fetchTitlesMeta, fetchSeasons } from "../justwatch";
 
 export async function getDiscover(allPlatforms = false) {
@@ -88,10 +88,7 @@ export async function getTitleDetail(titleId: string) {
   if (trackingRow) {
     const entry = queries.getTrackingFull.get(titleId) as { status: string } | null;
     const storedStatus = entry?.status ?? "watching";
-    let status: "watching" | "completed" | "stopped" = "watching";
-    if (storedStatus === "stopped") status = "stopped";
-    else if (totalEpisodes > 0 && watchedCount >= totalEpisodes) status = "completed";
-    else if (totalEpisodes === 0 && watchedCount > 0) status = "completed";
+    const status = deriveStatus(watchedCount, totalEpisodes, storedStatus);
     tracking = { status, watched: watchedCount, total: totalEpisodes };
   }
 
