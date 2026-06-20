@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Router } from "wouter";
-import { SlidersHorizontal, LogOut } from "lucide-react";
+import { SlidersHorizontal, LogOut, Tv, Film } from "lucide-react";
 import DiscoverView from "./DiscoverView";
 import HistoryView from "./HistoryView";
 import { GENRE_MAP } from "./components/constants";
@@ -48,42 +48,44 @@ function AppShell({ user, onSignOut }: { user: any; onSignOut: () => void }) {
         <a onClick={() => push({ view: "discover", filterType: "SHOW" })} className="shrink-0 cursor-pointer">
           <svg width="32" height="32" viewBox="0 0 64 64" fill="none"><rect width="64" height="64" rx="14" fill="#1a1a1a"/><path d="M16 8h32a4 4 0 0 1 4 4v44l-20-12-20 12V12a4 4 0 0 1 4-4z" fill="#e50914" opacity="0.9"/><polygon points="26,22 26,42 44,32" fill="white"/></svg>
         </a>
-        <div className="topbar-search flex-1 max-w-[500px] flex items-center relative">
-          <input
-            type="text"
-            placeholder="Search..."
-            value={activeActor || search}
-            onChange={(e) => { setActiveActor(null); setSearch(e.target.value); }}
-            className="flex-1 py-2 pl-5 pr-10 rounded-full border border-white/10 bg-white/5 backdrop-blur-[12px] text-[var(--color-text)] text-sm"
-          />
-          <button className="absolute right-2 top-1/2 -translate-y-1/2 bg-transparent border-none text-[var(--color-muted)] cursor-pointer p-1 flex items-center rounded-full hover:text-[var(--color-text)] transition-colors" onClick={() => setShowFilters(!showFilters)} title="Filters">
-            <SlidersHorizontal size={16} />
-          </button>
-          {showFilters && (
-            <div className="absolute top-[calc(100%+8px)] right-0 bg-[rgba(30,30,30,0.85)] backdrop-blur-[16px] border border-white/10 rounded-xl p-3 flex flex-col gap-2 z-200 min-w-40">
-              <label className="text-xs uppercase text-[var(--color-muted)]">Sort</label>
-              <select value={sort} onChange={(e) => push({ sort: e.target.value })} className="px-2 py-1.5 rounded-lg border border-[#333] bg-[var(--color-bg)] text-[var(--color-text)] text-sm">
-                <option value="IMDB_SCORE">IMDb Rating</option>
-                <option value="POPULAR">Popularity</option>
-              </select>
-              <label className="text-xs uppercase text-[var(--color-muted)]">Genre</label>
-              <div className="flex flex-wrap gap-1">
-                {Object.entries(GENRE_MAP).map(([code, name]) => (
-                  <button key={code} className={`px-2 py-0.5 rounded-full text-xs border cursor-pointer transition-all ${genres.includes(code) ? "bg-[rgba(229,9,20,0.2)] border-[var(--color-accent)] text-[var(--color-accent)]" : "bg-[#2a2a2a] text-[var(--color-muted)] border-transparent hover:border-[var(--color-accent)] hover:text-[var(--color-text)]"}`} onClick={() => handleGenreClick(code)}>{name}</button>
-                ))}
+        <div className="flex-1 flex items-center justify-center gap-3">
+          <div className="topbar-search flex-1 max-w-[500px] flex items-center relative">
+            <input
+              type="text"
+              placeholder="Search..."
+              value={activeActor || search}
+              onChange={(e) => { setActiveActor(null); setSearch(e.target.value); }}
+              className="flex-1 py-2 pl-5 pr-10 rounded-full border border-white/10 bg-white/5 backdrop-blur-[12px] text-[var(--color-text)] text-sm"
+            />
+            <button className="absolute right-2 top-1/2 -translate-y-1/2 bg-transparent border-none text-[var(--color-muted)] cursor-pointer p-1 flex items-center rounded-full hover:text-[var(--color-text)] transition-colors" onClick={() => setShowFilters(!showFilters)} title="Filters">
+              <SlidersHorizontal size={16} />
+            </button>
+            {showFilters && (
+              <div className="absolute top-[calc(100%+8px)] right-0 bg-[rgba(30,30,30,0.85)] backdrop-blur-[16px] border border-white/10 rounded-xl p-3 flex flex-col gap-2 z-200 min-w-40">
+                <label className="text-xs uppercase text-[var(--color-muted)]">Sort</label>
+                <select value={sort} onChange={(e) => push({ sort: e.target.value })} className="px-2 py-1.5 rounded-lg border border-[#333] bg-[var(--color-bg)] text-[var(--color-text)] text-sm">
+                  <option value="IMDB_SCORE">IMDb Rating</option>
+                  <option value="POPULAR">Popularity</option>
+                </select>
+                <label className="text-xs uppercase text-[var(--color-muted)]">Genre</label>
+                <div className="flex flex-wrap gap-1">
+                  {Object.entries(GENRE_MAP).map(([code, name]) => (
+                    <button key={code} className={`px-2 py-0.5 rounded-full text-xs border cursor-pointer transition-all ${genres.includes(code) ? "bg-[rgba(229,9,20,0.2)] border-[var(--color-accent)] text-[var(--color-accent)]" : "bg-[#2a2a2a] text-[var(--color-muted)] border-transparent hover:border-[var(--color-accent)] hover:text-[var(--color-text)]"}`} onClick={() => handleGenreClick(code)}>{name}</button>
+                  ))}
+                </div>
+                <label className="text-xs uppercase text-[var(--color-muted)]">Platforms</label>
+                <button className={`px-2 py-1 rounded-full text-xs border cursor-pointer transition-all ${allPlatforms ? "bg-[rgba(229,9,20,0.2)] border-[var(--color-accent)] text-[var(--color-accent)]" : "bg-[#2a2a2a] text-[var(--color-muted)] border-transparent hover:border-[var(--color-accent)]"}`} onClick={() => setAllPlatforms(!allPlatforms)}>
+                  {allPlatforms ? "All platforms" : "My platforms only"}
+                </button>
               </div>
-              <label className="text-xs uppercase text-[var(--color-muted)]">Platforms</label>
-              <button className={`px-2 py-1 rounded-full text-xs border cursor-pointer transition-all ${allPlatforms ? "bg-[rgba(229,9,20,0.2)] border-[var(--color-accent)] text-[var(--color-accent)]" : "bg-[#2a2a2a] text-[var(--color-muted)] border-transparent hover:border-[var(--color-accent)]"}`} onClick={() => setAllPlatforms(!allPlatforms)}>
-                {allPlatforms ? "All platforms" : "My platforms only"}
-              </button>
-            </div>
-          )}
-        </div>
-        {/* Pill Toggle - TV/Movie */}
-        <div className="relative inline-flex bg-white/5 backdrop-blur-[12px] border border-white/10 rounded-full p-[3px] shrink-0">
-          <div className={`absolute inset-[3px] rounded-full bg-[var(--color-accent)] transition-transform duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] w-[calc(50%-3px)] ${filterType === "MOVIE" ? "left-auto right-[3px]" : ""}`} />
-          <button className={`relative z-1 px-4 py-1.5 border-none bg-transparent text-sm font-medium cursor-pointer rounded-full transition-colors flex-1 text-center leading-tight ${filterType === "SHOW" ? "text-white" : "text-[var(--color-muted)]"}`} onClick={() => push({ filterType: "SHOW" })}>TV Shows</button>
-          <button className={`relative z-1 px-4 py-1.5 border-none bg-transparent text-sm font-medium cursor-pointer rounded-full transition-colors flex-1 text-center leading-tight ${filterType === "MOVIE" ? "text-white" : "text-[var(--color-muted)]"}`} onClick={() => push({ filterType: "MOVIE" })}>Movies</button>
+            )}
+          </div>
+          {/* TV/Movie toggle */}
+          <div className="relative inline-flex bg-white/5 backdrop-blur-[12px] border border-white/10 rounded-full p-[3px] shrink-0">
+            <div className={`absolute inset-[3px] rounded-full bg-[var(--color-accent)] transition-transform duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] w-[calc(50%-3px)] ${filterType === "MOVIE" ? "left-auto right-[3px]" : ""}`} />
+            <button className={`relative z-1 px-3 py-1.5 border-none bg-transparent cursor-pointer rounded-full transition-colors ${filterType === "SHOW" ? "text-white" : "text-[var(--color-muted)]"}`} onClick={() => push({ filterType: "SHOW" })} title="TV Shows"><Tv size={16} /></button>
+            <button className={`relative z-1 px-3 py-1.5 border-none bg-transparent cursor-pointer rounded-full transition-colors ${filterType === "MOVIE" ? "text-white" : "text-[var(--color-muted)]"}`} onClick={() => push({ filterType: "MOVIE" })} title="Movies"><Film size={16} /></button>
+          </div>
         </div>
         <button onClick={onSignOut} className="ml-3 shrink-0 flex items-center gap-2 bg-transparent border-none cursor-pointer text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors" title="Sign out">
           {user.photoURL && <img src={user.photoURL} alt="" className="w-7 h-7 rounded-full" />}
