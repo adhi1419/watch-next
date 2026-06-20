@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Router } from "wouter";
-import { SlidersHorizontal, LogOut, Tv, Film } from "lucide-react";
+import { SlidersHorizontal, LogOut, Tv, Film, X } from "lucide-react";
 import DiscoverView from "./DiscoverView";
 import HistoryView from "./HistoryView";
 import { GENRE_MAP } from "./components/constants";
@@ -55,7 +55,7 @@ function AppShell({ user, onSignOut }: { user: any; onSignOut: () => void }) {
     <div className="flex flex-col h-screen">
       {/* Top Bar */}
       <nav className="sticky top-0 z-100 flex items-center justify-between px-6 h-[var(--spacing-topbar)] bg-[rgba(30,30,30,0.7)] backdrop-blur-[16px] border-b border-white/8 w-full">
-        <a onClick={() => push({ view: "discover", filterType: "SHOW" })} className="shrink-0 cursor-pointer">
+        <a onClick={() => { push({ view: "discover", filterType: "SHOW" }); setSearch(""); setActiveActor(null); }} className="shrink-0 cursor-pointer">
           <svg width="32" height="32" viewBox="0 0 64 64" fill="none"><rect width="64" height="64" rx="14" fill="#1a1a1a"/><path d="M16 8h32a4 4 0 0 1 4 4v44l-20-12-20 12V12a4 4 0 0 1 4-4z" fill="#e50914" opacity="0.9"/><polygon points="26,22 26,42 44,32" fill="white"/></svg>
         </a>
         <div className="flex-1 flex items-center justify-center gap-3">
@@ -70,6 +70,11 @@ function AppShell({ user, onSignOut }: { user: any; onSignOut: () => void }) {
             <button className="absolute right-2 top-1/2 -translate-y-1/2 bg-transparent border-none text-[var(--color-muted)] cursor-pointer p-1 flex items-center rounded-full hover:text-[var(--color-text)] transition-colors" onClick={() => setShowFilters(!showFilters)} title="Filters">
               <SlidersHorizontal size={16} />
             </button>
+            {(search || activeActor) && (
+              <button className="absolute right-8 top-1/2 -translate-y-1/2 bg-transparent border-none text-[var(--color-muted)] cursor-pointer p-1 flex items-center rounded-full hover:text-[var(--color-text)] transition-colors" onClick={() => { setSearch(""); setActiveActor(null); }} title="Clear">
+                <X size={14} />
+              </button>
+            )}
             {showFilters && (
               <div className="absolute top-[calc(100%+8px)] right-0 bg-[rgba(30,30,30,0.85)] backdrop-blur-[16px] border border-white/10 rounded-xl p-3 flex flex-col gap-2 z-200 min-w-40">
                 <label className="text-xs uppercase text-[var(--color-muted)]">Sort</label>
