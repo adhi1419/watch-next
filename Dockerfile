@@ -4,6 +4,9 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN bun install
 COPY . .
+ENV VITE_FIREBASE_API_KEY=AIzaSyBG3i2KLxYvgaYd0r08Kf9fzHmXBongNUQ
+ENV VITE_FIREBASE_AUTH_DOMAIN=watch-next-500021.firebaseapp.com
+ENV VITE_FIREBASE_PROJECT_ID=watch-next-500021
 RUN bun run build
 
 # Production
