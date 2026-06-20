@@ -59,7 +59,6 @@ export default function DiscoverView({ search, setSearch, sortBy, activeGenres, 
   const handleActorClick = (name: string) => { setActiveActor(activeActor === name ? null : name); setSearch(""); };
   const hasActiveFilters = activeGenres.length > 0 || activeActor;
 
-  // Carousel items from currently watching shows
   const carouselItems = currentlyWatching
     .filter(t => t.type === "SHOW")
     .map(t => ({ id: t.id, title: t.title, posterUrl: t.posterUrl, watched: t.tracking?.watched ?? 0, total: t.tracking?.total ?? 0 }));
@@ -67,10 +66,10 @@ export default function DiscoverView({ search, setSearch, sortBy, activeGenres, 
   return (
     <>
       {hasActiveFilters && (
-        <div className="active-filters">
-          {activeGenres.map(g => <span key={g} className="filter-chip" onClick={() => handleGenreClick(g)}>{GENRE_MAP[g] || g} ✕</span>)}
-          {activeActor && <span className="filter-chip" onClick={() => setActiveActor(null)}>🎭 {activeActor} ✕</span>}
-          <button className="clear-filters" onClick={() => { setActiveGenres([]); setActiveActor(null); setSearch(""); }}>Clear all</button>
+        <div className="flex items-center gap-2 px-6 py-2 flex-wrap">
+          {activeGenres.map(g => <span key={g} className="px-3 py-1 rounded-full text-[0.8rem] bg-[rgba(229,9,20,0.2)] text-[var(--color-accent)] border border-[var(--color-accent)] cursor-pointer hover:opacity-70 transition-opacity" onClick={() => handleGenreClick(g)}>{GENRE_MAP[g] || g} ✕</span>)}
+          {activeActor && <span className="px-3 py-1 rounded-full text-[0.8rem] bg-[rgba(229,9,20,0.2)] text-[var(--color-accent)] border border-[var(--color-accent)] cursor-pointer hover:opacity-70 transition-opacity" onClick={() => setActiveActor(null)}>🎭 {activeActor} ✕</span>}
+          <button className="bg-transparent border-none text-[var(--color-muted)] text-[0.8rem] cursor-pointer underline" onClick={() => { setActiveGenres([]); setActiveActor(null); setSearch(""); }}>Clear all</button>
         </div>
       )}
 
@@ -81,10 +80,10 @@ export default function DiscoverView({ search, setSearch, sortBy, activeGenres, 
         }} />
       )}
 
-      <div className="watchnext-section">
-        <h3 className="watchnext-title">{isSearchMode ? "Search Results" : "Watch Next"}</h3>
+      <div>
+        <h3 className="text-lg font-bold mb-2 px-4">{isSearchMode ? "Search Results" : "Watch Next"}</h3>
         {!isSearchMode && watchlistItems.filter(w => w.type === filterType).length > 0 && (
-          <div className="grid">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(360px,1fr))] gap-5 px-6">
             {watchlistItems.filter(w => w.type === filterType).map(w => (
               <TitleCard key={w.id} title={w.title} posterUrl={w.posterUrl} objectType={w.type} isPinned onClick={() => onSelect(w)} />
             ))}

@@ -11,7 +11,7 @@ export interface Title {
   seasonCount: number | null;
   cast: { name: string; character: string | null }[];
   ageRating: string | null;
-  tracking: { status: "watching" | "completed" | "stopped"; watched: number; total: number } | null;
+  tracking: { status: "watching" | "completed" | "stopped" | "up_to_date"; watched: number; total: number } | null;
   pinned: boolean;
 }
 

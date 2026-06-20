@@ -28,8 +28,8 @@ export default function CatalogGrid({ titles, selectedId, loading, hasMore, onLo
 
   return (
     <>
-      {loading && titles.length === 0 && <p className="loading">Searching...</p>}
-      <div className="grid">
+      {loading && titles.length === 0 && <p className="text-[var(--color-muted)] text-center py-8">Searching...</p>}
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(360px,1fr))] gap-5 px-6">
         {titles.map(t => (
           <TitleCard
             key={t.id}
@@ -51,8 +51,8 @@ export default function CatalogGrid({ titles, selectedId, loading, hasMore, onLo
           />
         ))}
       </div>
-      <div ref={sentinelRef} className="sentinel">
-        {loading && <p className="loading">Loading more...</p>}
+      <div ref={sentinelRef} className="min-h-px py-8 text-center">
+        {loading && <p className="text-[var(--color-muted)] text-center py-8">Loading more...</p>}
       </div>
     </>
   );

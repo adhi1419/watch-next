@@ -41,9 +41,9 @@ export default function HistoryView({ filterType }: HistoryViewProps) {
 
   return (
     <>
-      {loading && <p className="loading">Loading history...</p>}
-      {!loading && items.length === 0 && <p className="loading">No history yet.</p>}
-      <div className="grid" style={{ padding: "0 1rem" }}>
+      {loading && <p className="text-[var(--color-muted)] text-center py-8">Loading history...</p>}
+      {!loading && items.length === 0 && <p className="text-[var(--color-muted)] text-center py-8">No history yet.</p>}
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(360px,1fr))] gap-5 px-4">
         {items.map(item => (
           <TitleCard
             key={item.id}

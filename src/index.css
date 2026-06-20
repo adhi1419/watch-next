@@ -24,4 +24,7 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     min-height: 100vh;
   }
+  .main-scroll:has(aside) {
+    padding-right: var(--spacing-panel);
+  }
 }

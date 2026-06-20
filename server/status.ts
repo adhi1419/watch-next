@@ -1,7 +1,7 @@
 import { queries } from "./db";
-import { fetchTitlesMeta, type TitleMeta } from "./justwatch";
+import { fetchTitlesMeta, fetchNetflixAvailableCount, type TitleMeta } from "./justwatch";
 
-export type DerivedStatus = "watching" | "completed" | "stopped";
+export type DerivedStatus = "watching" | "completed" | "stopped" | "up_to_date";
 
 export interface Title {
   id: string;
@@ -20,10 +20,11 @@ export interface Title {
   pinned: boolean;
 }
 
-function deriveStatus(watched: number, total: number, storedStatus: string): DerivedStatus {
+function deriveStatus(watched: number, total: number, storedStatus: string, available?: number): DerivedStatus {
   if (storedStatus === "stopped") return "stopped";
   if (total > 0 && watched >= total) return "completed";
   if (total === 0 && watched > 0) return "completed";
+  if (available !== undefined && available > 0 && watched >= available) return "up_to_date";
   return "watching";
 }
 
@@ -53,10 +54,10 @@ export async function enrichToTitles(
     watchlistSet = new Set(all.map(w => w.titleId));
   }
 
-  return entries
+  const results = entries
     .map(e => {
       const meta = metaMap.get(e.titleId);
-      if (!meta) return null; // Title removed from JustWatch catalog
+      if (!meta) return null;
 
       const watched = countMap.get(e.titleId) ?? 0;
       const total = meta.type === "MOVIE" ? 1 : meta.totalEpisodes;
@@ -80,6 +81,21 @@ export async function enrichToTitles(
       };
     })
     .filter((t): t is Title => t !== null);
+
+  // Targeted availability check for shows still "watching" with progress
+  const watchingShows = results.filter(t => t.tracking?.status === "watching" && t.type === "SHOW" && t.tracking.watched > 0);
+  if (watchingShows.length > 0) {
+    const checks = await Promise.all(watchingShows.map(t => fetchNetflixAvailableCount(t.id)));
+    for (let i = 0; i < watchingShows.length; i++) {
+      const available = checks[i];
+      const t = watchingShows[i];
+      if (available !== undefined && t.tracking && t.tracking.watched >= available) {
+        t.tracking = { ...t.tracking, status: "up_to_date" };
+      }
+    }
+  }
+
+  return results;
 }
 
 /**

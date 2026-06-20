@@ -194,3 +194,39 @@ export async function fetchSeasons(titleId: string): Promise<SeasonData[]> {
     })),
   }));
 }
+
+// --- Netflix availability check (targeted, for few titles) ---
+
+const AVAILABILITY_QUERY = `query($id: ID!) {
+  node(id: $id) {
+    ... on Show { seasons {
+      episodes {
+        id
+        offers(country: "DE", platform: WEB, filter: { packages: ["nfx"] }) { id }
+      }
+    } }
+  }
+}`;
+
+/**
+ * Count Netflix-available episodes for a single show.
+ * Only call this for shows in "watching" state (max ~5 at a time).
+ */
+export async function fetchNetflixAvailableCount(titleId: string): Promise<number | undefined> {
+  try {
+    const resp = await fetch(GQL_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: AVAILABILITY_QUERY, variables: { id: titleId } }),
+    });
+    if (!resp.ok) return undefined;
+    const json = await resp.json();
+    const seasons = json.data?.node?.seasons;
+    if (!seasons) return undefined;
+    return seasons.reduce((sum: number, s: any) =>
+      sum + (s.episodes ?? []).filter((e: any) => e.offers?.length > 0).length, 0
+    );
+  } catch {
+    return undefined;
+  }
+}

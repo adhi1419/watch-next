@@ -11,7 +11,7 @@ export async function getDiscover() {
 export async function getHistory() {
   const entries = queries.allTrackingAlpha.all() as any[];
   const titles = await enrichToTitles(entries, { includeWatchlistCheck: true });
-  return titles.filter(t => t.tracking?.status === "completed" || t.tracking?.status === "stopped");
+  return titles.filter(t => t.tracking?.status === "completed" || t.tracking?.status === "stopped" || t.tracking?.status === "up_to_date");
 }
 
 export async function getWatchlist() {

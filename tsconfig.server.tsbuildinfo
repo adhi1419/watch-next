@@ -1,0 +1,1 @@
+{"root":["./server/bun-sqlite.d.ts","./server/db.ts","./server/index.ts","./server/justwatch.ts","./server/status.ts","./server/validate.ts","./server/routes/discover.ts","./server/routes/tracking.ts","./server/routes/watchlist.ts"],"version":"6.0.3"}
