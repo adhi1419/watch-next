@@ -37,9 +37,7 @@ export default function TitleCard({ title, posterUrl, imdbScore, tomatoMeter, ye
       {posterUrl && <img src={posterUrl} alt={title} loading="lazy" className="w-[140px] min-h-[210px] object-cover shrink-0" />}
       <div className="p-3 flex flex-col gap-1.5 overflow-hidden">
         <h3 className="text-[1.05rem] leading-tight font-medium line-clamp-2">{title}</h3>
-        {!isPinned && (
-          <>
-            <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3">
               {imdbScore && <span className="text-xl font-bold text-[#ffc107]"><Star size={16} className="inline fill-[#ffc107] text-[#ffc107] mr-0.5 -mt-0.5" />{imdbScore}</span>}
               {tomatoMeter && <span className="text-base font-semibold text-[#fa320a]">🍅 {tomatoMeter}%</span>}
             </div>
@@ -54,8 +52,6 @@ export default function TitleCard({ title, posterUrl, imdbScore, tomatoMeter, ye
               </div>
             )}
             {providers && providers.length > 0 && <ProviderIcons providers={providers} size={18} />}
-          </>
-        )}
       </div>
       {progress && (
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
