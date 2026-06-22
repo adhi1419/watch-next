@@ -12,6 +12,12 @@ export async function authenticate(req: IncomingMessage): Promise<AuthContext> {
     throw new AuthError("Missing or invalid Authorization header");
   }
   const token = authHeader.slice(7);
+
+  // Dev bypass — only in development, never in production
+  if (process.env.NODE_ENV === "development" && token === "dev-bypass-token") {
+    return { uid: "qunj91td0bU76Kvr5AGj05DSUcs2", email: "dev@local" };
+  }
+
   try {
     const decoded = await getAuth().verifyIdToken(token);
     return { uid: decoded.uid, email: decoded.email };

@@ -7,6 +7,11 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (import.meta.env.DEV) {
+      setUser({ uid: "dev", email: "dev@local", photoURL: null } as any);
+      setLoading(false);
+      return;
+    }
     return onAuthChange((u) => { setUser(u); setLoading(false); });
   }, []);
 
