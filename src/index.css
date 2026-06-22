@@ -25,6 +25,8 @@
     min-height: 100vh;
   }
   .main-scroll:has(aside) {
-    padding-right: var(--spacing-panel);
+    @media (min-width: 768px) {
+      padding-right: var(--spacing-panel);
+    }
   }
 }

@@ -52,7 +52,7 @@ export default function DetailPanel({ selected, onClose, onToggleWatchlist, isIn
   };
 
   return (
-    <aside className="fixed top-[var(--spacing-topbar)] right-0 bottom-0 w-[var(--spacing-panel)] bg-[rgba(30,30,30,0.92)] backdrop-blur-[20px] border-l border-white/8 flex flex-col z-100 overflow-hidden" ref={panelRef}>
+    <aside className="fixed inset-0 md:inset-auto md:top-[var(--spacing-topbar)] md:right-0 md:bottom-0 md:w-[var(--spacing-panel)] bg-[rgba(30,30,30,0.92)] backdrop-blur-[20px] border-l border-white/8 flex flex-col z-200 md:z-100 overflow-hidden overscroll-contain" ref={panelRef}>
       <button className="absolute top-3 right-3 bg-black/50 border-none text-[var(--color-text)] cursor-pointer z-10 rounded-full w-7 h-7 flex items-center justify-center hover:bg-black/80" onClick={onClose}><X size={16} /></button>
       {selected.posterUrl && <img src={selected.posterUrl} alt={selected.title} className="w-full max-h-60 object-cover shrink-0" />}
       <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-3.5">

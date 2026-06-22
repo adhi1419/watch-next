@@ -90,7 +90,7 @@ export default function DiscoverView({ search, setSearch, sortBy, activeGenres, 
         />
       )}
       {panelLoading && selectedId && !selected && (
-        <aside className="fixed top-[var(--spacing-topbar)] right-0 bottom-0 w-[var(--spacing-panel)] bg-[rgba(30,30,30,0.92)] backdrop-blur-[20px] border-l border-white/8 flex items-center justify-center z-100">
+        <aside className="fixed inset-0 md:inset-auto md:top-[var(--spacing-topbar)] md:right-0 md:bottom-0 md:w-[var(--spacing-panel)] bg-[rgba(30,30,30,0.92)] backdrop-blur-[20px] border-l border-white/8 flex items-center justify-center z-200 md:z-100">
           <p className="text-[var(--color-muted)]">Loading...</p>
         </aside>
       )}

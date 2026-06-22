@@ -6,6 +6,9 @@ import HistoryView from "./HistoryView";
 import { GENRE_MAP } from "./components/constants";
 import { useUrlState } from "./hooks/useUrlState";
 import { useAuth, LoginScreen } from "./components/AuthGate";
+import { useIsMobile } from "./hooks/useIsMobile";
+import { BottomDock, type DockTab } from "./components/BottomDock";
+import { SearchOverlay } from "./components/SearchOverlay";
 
 export default function App() {
   const { user, loading, signIn, signOut } = useAuth();
@@ -27,11 +30,27 @@ function AppShell({ user, onSignOut }: { user: any; onSignOut: () => void }) {
   const [activeActor, setActiveActor] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [allPlatforms, setAllPlatforms] = useState(false);
+  const [showSearchOverlay, setShowSearchOverlay] = useState(false);
+  const isMobile = useIsMobile();
 
   const handleGenreClick = (genre: string) => {
     const next = genres.includes(genre) ? genres.filter(g => g !== genre) : [...genres, genre];
     push({ genres: next });
   };
+
+  const handleDockNavigate = (tab: DockTab) => {
+    if (tab === "search") {
+      setShowSearchOverlay(true);
+    } else if (tab === "history") {
+      push({ view: "history" });
+    } else if (tab === "discover-show") {
+      push({ view: "discover", filterType: "SHOW" });
+    } else if (tab === "discover-movie") {
+      push({ view: "discover", filterType: "MOVIE" });
+    }
+  };
+
+  const activeDockTab: DockTab = showSearchOverlay ? "search" : view === "history" ? "history" : filterType === "MOVIE" ? "discover-movie" : "discover-show";
 
   useEffect(() => {
     if (!showFilters) return;
@@ -55,10 +74,12 @@ function AppShell({ user, onSignOut }: { user: any; onSignOut: () => void }) {
     <div className="flex flex-col h-screen">
       {/* Top Bar */}
       <nav className="sticky top-0 z-100 flex items-center justify-between px-4 md:px-6 h-[var(--spacing-topbar)] bg-[rgba(30,30,30,0.7)] backdrop-blur-[16px] border-b border-white/8 w-full overflow-hidden">
-        <a onClick={() => { push({ view: "discover", filterType: "SHOW" }); setSearch(""); setActiveActor(null); }} className="shrink-0 cursor-pointer">
+        <a onClick={() => { push({ view: "discover", filterType: "SHOW" }); setSearch(""); setActiveActor(null); setShowSearchOverlay(false); }} className="shrink-0 cursor-pointer">
           <svg width="32" height="32" viewBox="0 0 64 64" fill="none"><rect width="64" height="64" rx="14" fill="#1a1a1a"/><path d="M16 8h32a4 4 0 0 1 4 4v44l-20-12-20 12V12a4 4 0 0 1 4-4z" fill="#e50914" opacity="0.9"/><polygon points="26,22 26,42 44,32" fill="white"/></svg>
         </a>
-        <div className="flex-1 min-w-0 flex items-center justify-center gap-3">
+
+        {/* Desktop center: search + toggle (hidden on mobile) */}
+        <div className="hidden md:flex flex-1 min-w-0 items-center justify-center gap-3" data-testid="topbar-center">
           <div className="topbar-search flex-1 min-w-0 max-w-[500px] flex items-center relative">
             <input
               type="text"
@@ -102,6 +123,7 @@ function AppShell({ user, onSignOut }: { user: any; onSignOut: () => void }) {
             <button className={`relative z-1 px-3 py-1.5 border-none bg-transparent cursor-pointer rounded-full transition-colors ${filterType === "MOVIE" ? "text-white" : "text-[var(--color-muted)]"}`} onClick={() => push({ filterType: "MOVIE" })} title="Movies"><Film size={16} /></button>
           </div>
         </div>
+
         <div className="ml-3 shrink-0 relative" data-usermenu>
           <button onClick={() => setShowUserMenu(prev => !prev)} className="flex items-center bg-transparent border-none cursor-pointer">
             {user.photoURL && <img src={user.photoURL} alt="" className="w-8 h-8 rounded-full hover:ring-2 hover:ring-white/20 transition-all" />}
@@ -118,8 +140,8 @@ function AppShell({ user, onSignOut }: { user: any; onSignOut: () => void }) {
       </nav>
 
       {/* Main Content */}
-      <main className="main-scroll flex-1 overflow-y-auto pb-6">
-        {/* View Tabs */}
+      <main className={`main-scroll flex-1 overflow-y-auto ${isMobile ? "pb-16" : "pb-6"}`}>
+        {/* View Tabs (floating pill) */}
         <div className="sticky top-0 z-50 flex justify-center py-2 px-4 -mb-[44px] pointer-events-none">
           <div className="relative inline-flex pointer-events-auto backdrop-blur-[24px] backdrop-saturate-[1.8] bg-white/[0.07] border-2 border-white/25 rounded-full p-[3px] shadow-[0_4px_24px_rgba(0,0,0,0.5)]">
             <div className={`absolute top-[3px] bottom-[3px] w-[calc(50%-3px)] bg-[var(--color-accent)] rounded-full transition-transform duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] ${view === "history" ? "translate-x-[calc(100%+2px)]" : "translate-x-[2px]"}`} />
@@ -133,6 +155,23 @@ function AppShell({ user, onSignOut }: { user: any; onSignOut: () => void }) {
         )}
         {view === "history" && <HistoryView filterType={filterType} allPlatforms={allPlatforms} />}
       </main>
+
+      {/* Mobile: Bottom Dock */}
+      {isMobile && <BottomDock activeTab={activeDockTab} onNavigate={handleDockNavigate} />}
+
+      {/* Mobile: Search Overlay */}
+      {showSearchOverlay && (
+        <SearchOverlay
+          onClose={() => setShowSearchOverlay(false)}
+          onSearch={(q) => setSearch(q)}
+          sortBy={sort}
+          onSortChange={(v) => push({ sort: v })}
+          genres={genres}
+          onGenreToggle={handleGenreClick}
+          allPlatforms={allPlatforms}
+          onPlatformToggle={() => setAllPlatforms(!allPlatforms)}
+        />
+      )}
     </div>
   );
 }
