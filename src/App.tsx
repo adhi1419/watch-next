@@ -137,7 +137,7 @@ function AppShell({ user, onSignOut }: { user: any; onSignOut: () => void }) {
 
         <div className="ml-3 shrink-0 relative" data-usermenu>
           <button onClick={() => setShowUserMenu(prev => !prev)} className="flex items-center bg-transparent border-none cursor-pointer">
-            {user.photoURL && <img src={user.photoURL} alt="" className="w-8 h-8 rounded-full hover:ring-2 hover:ring-white/20 transition-all" />}
+            {user.photoURL ? <img src={user.photoURL} alt="" className="w-8 h-8 rounded-full hover:ring-2 hover:ring-white/20 transition-all" /> : <div className="w-8 h-8 rounded-full bg-[var(--color-accent)] flex items-center justify-center text-white text-sm font-bold">{(user.email?.[0] || "?").toUpperCase()}</div>}
           </button>
           {showUserMenu && (
             <div className="absolute top-full right-0 mt-2 bg-[rgba(30,30,30,0.95)] backdrop-blur-[16px] border border-white/10 rounded-xl p-1 min-w-36 z-200">
