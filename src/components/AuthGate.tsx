@@ -16,6 +16,7 @@ export function useAuth() {
 export function LoginScreen({ onSignIn }: { onSignIn: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center h-screen gap-6">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none"><rect width="64" height="64" rx="14" fill="#1a1a1a"/><path d="M16 8h32a4 4 0 0 1 4 4v44l-20-12-20 12V12a4 4 0 0 1 4-4z" fill="#e50914" opacity="0.9"/><polygon points="26,22 26,42 44,32" fill="white"/></svg>
       <h1 className="text-3xl font-bold">Watch Next</h1>
       <p className="text-[var(--color-muted)]">Track what you're watching across Netflix & Prime</p>
       <button
