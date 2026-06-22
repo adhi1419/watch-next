@@ -7,6 +7,7 @@ import { GENRE_MAP } from "./components/constants";
 import { useUrlState } from "./hooks/useUrlState";
 import { useAuth, LoginScreen } from "./components/AuthGate";
 import { useIsMobile } from "./hooks/useIsMobile";
+import { useDiscover } from "./hooks/useDiscover";
 import { BottomDock, type DockTab } from "./components/BottomDock";
 import { SearchOverlay } from "./components/SearchOverlay";
 
@@ -31,7 +32,17 @@ function AppShell({ user, onSignOut }: { user: any; onSignOut: () => void }) {
   const [search, setSearch] = useState("");
   const [allPlatforms, setAllPlatforms] = useState(false);
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
+  const [mobileSearch, setMobileSearch] = useState("");
   const isMobile = useIsMobile();
+
+  const overlayResults = useDiscover({
+    search: mobileSearch,
+    sortBy: sort,
+    genres,
+    filterType: filterType as "MOVIE" | "SHOW",
+    activeActor: null,
+    allPlatforms,
+  });
 
   const handleGenreClick = (genre: string) => {
     const next = genres.includes(genre) ? genres.filter(g => g !== genre) : [...genres, genre];
@@ -73,7 +84,7 @@ function AppShell({ user, onSignOut }: { user: any; onSignOut: () => void }) {
   return (
     <div className="flex flex-col h-screen">
       {/* Top Bar */}
-      <nav className="sticky top-0 z-100 flex items-center justify-between px-4 md:px-6 h-[var(--spacing-topbar)] bg-[rgba(30,30,30,0.7)] backdrop-blur-[16px] border-b border-white/8 w-full overflow-hidden">
+      <nav className="sticky top-0 z-100 flex items-center justify-between px-4 md:px-6 h-[var(--spacing-topbar)] bg-[rgba(30,30,30,0.7)] backdrop-blur-[16px] border-b border-white/8 w-full">
         <a onClick={() => { push({ view: "discover", filterType: "SHOW" }); setSearch(""); setActiveActor(null); setShowSearchOverlay(false); }} className="shrink-0 cursor-pointer">
           <svg width="32" height="32" viewBox="0 0 64 64" fill="none"><rect width="64" height="64" rx="14" fill="#1a1a1a"/><path d="M16 8h32a4 4 0 0 1 4 4v44l-20-12-20 12V12a4 4 0 0 1 4-4z" fill="#e50914" opacity="0.9"/><polygon points="26,22 26,42 44,32" fill="white"/></svg>
         </a>
@@ -162,14 +173,19 @@ function AppShell({ user, onSignOut }: { user: any; onSignOut: () => void }) {
       {/* Mobile: Search Overlay */}
       {showSearchOverlay && (
         <SearchOverlay
-          onClose={() => setShowSearchOverlay(false)}
-          onSearch={(q) => setSearch(q)}
+          onClose={() => { setShowSearchOverlay(false); setMobileSearch(""); }}
+          onSearch={(q) => setMobileSearch(q)}
           sortBy={sort}
           onSortChange={(v) => push({ sort: v })}
           genres={genres}
           onGenreToggle={handleGenreClick}
           allPlatforms={allPlatforms}
           onPlatformToggle={() => setAllPlatforms(!allPlatforms)}
+          results={overlayResults.titles}
+          loading={overlayResults.loading}
+          hasMore={overlayResults.hasMore}
+          onLoadMore={overlayResults.loadMore}
+          onSelectTitle={(t) => { setShowSearchOverlay(false); setMobileSearch(""); push({ view: "discover", filterType: t.type }); }}
         />
       )}
     </div>

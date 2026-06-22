@@ -1,6 +1,8 @@
 import { useRef, useEffect, useState } from "react";
 import { X, SlidersHorizontal } from "lucide-react";
 import { GENRE_MAP } from "./constants";
+import CatalogGrid from "./CatalogGrid";
+import type { Title } from "../types";
 
 interface SearchOverlayProps {
   onClose: () => void;
@@ -11,9 +13,14 @@ interface SearchOverlayProps {
   onGenreToggle: (g: string) => void;
   allPlatforms: boolean;
   onPlatformToggle: () => void;
+  results?: Title[];
+  loading?: boolean;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  onSelectTitle?: (t: Title) => void;
 }
 
-export function SearchOverlay({ onClose, onSearch, sortBy, onSortChange, genres, onGenreToggle, allPlatforms, onPlatformToggle }: SearchOverlayProps) {
+export function SearchOverlay({ onClose, onSearch, sortBy, onSortChange, genres, onGenreToggle, allPlatforms, onPlatformToggle, results = [], loading = false, hasMore = false, onLoadMore, onSelectTitle }: SearchOverlayProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -66,8 +73,15 @@ export function SearchOverlay({ onClose, onSearch, sortBy, onSortChange, genres,
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        {/* Search results will be rendered here by the parent */}
+      <div className="flex-1 overflow-y-auto px-0 py-4">
+        <CatalogGrid
+          titles={results}
+          selectedId={null}
+          loading={loading}
+          hasMore={hasMore}
+          onLoadMore={onLoadMore ?? (() => {})}
+          onSelect={(t) => onSelectTitle?.(t)}
+        />
       </div>
     </div>
   );
