@@ -54,12 +54,12 @@ function AppShell({ user, onSignOut }: { user: any; onSignOut: () => void }) {
   return (
     <div className="flex flex-col h-screen">
       {/* Top Bar */}
-      <nav className="sticky top-0 z-100 flex items-center justify-between px-6 h-[var(--spacing-topbar)] bg-[rgba(30,30,30,0.7)] backdrop-blur-[16px] border-b border-white/8 w-full">
+      <nav className="sticky top-0 z-100 flex items-center justify-between px-4 md:px-6 h-[var(--spacing-topbar)] bg-[rgba(30,30,30,0.7)] backdrop-blur-[16px] border-b border-white/8 w-full overflow-hidden">
         <a onClick={() => { push({ view: "discover", filterType: "SHOW" }); setSearch(""); setActiveActor(null); }} className="shrink-0 cursor-pointer">
           <svg width="32" height="32" viewBox="0 0 64 64" fill="none"><rect width="64" height="64" rx="14" fill="#1a1a1a"/><path d="M16 8h32a4 4 0 0 1 4 4v44l-20-12-20 12V12a4 4 0 0 1 4-4z" fill="#e50914" opacity="0.9"/><polygon points="26,22 26,42 44,32" fill="white"/></svg>
         </a>
-        <div className="flex-1 flex items-center justify-center gap-3">
-          <div className="topbar-search flex-1 max-w-[500px] flex items-center relative">
+        <div className="flex-1 min-w-0 flex items-center justify-center gap-3">
+          <div className="topbar-search flex-1 min-w-0 max-w-[500px] flex items-center relative">
             <input
               type="text"
               placeholder="Search..."
