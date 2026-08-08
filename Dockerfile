@@ -1,8 +1,8 @@
 # API-only container (frontend served from GitHub Pages)
-FROM oven/bun:1
+FROM oven/bun:1.3.14
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN bun install --production
+COPY package.json bun.lock ./
+RUN bun install --production --frozen-lockfile
 COPY server ./server
 
 ENV NODE_ENV=production
