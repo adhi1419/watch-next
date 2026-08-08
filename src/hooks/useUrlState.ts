@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 
 type View = "discover" | "history";
 type FilterType = "MOVIE" | "SHOW";
@@ -9,10 +9,12 @@ interface UrlState {
   filterType: FilterType;
   sort: string;
   genres: string[];
+  titleId: string | null;
 }
 
 export function useUrlState() {
   const [location, setLocation] = useLocation();
+  const search = useSearch();
 
   useEffect(() => {
     if (location === "/" || location === "") {
@@ -25,12 +27,13 @@ export function useUrlState() {
   const typeSeg = segments[1]?.toLowerCase();
   const filterType: FilterType = typeSeg === "movies" ? "MOVIE" : "SHOW";
 
-  const params = new URLSearchParams(window.location.search);
+  const params = new URLSearchParams(search);
   const state: UrlState = {
     view,
     filterType,
     sort: params.get("sort") ?? "POPULAR",
     genres: params.get("genres")?.split(",").filter(Boolean) ?? [],
+    titleId: params.get("title"),
   };
 
   const buildUrl = useCallback((updates: Partial<UrlState>) => {
@@ -40,6 +43,7 @@ export function useUrlState() {
     const p = new URLSearchParams();
     if (next.sort !== "POPULAR") p.set("sort", next.sort);
     if (next.genres.length) p.set("genres", next.genres.join(","));
+    if (next.titleId) p.set("title", next.titleId);
     const qs = p.toString();
     return qs ? `${base}?${qs}` : base;
   }, [state]);

@@ -1,10 +1,11 @@
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchTitleDetail } from "../api";
+import { useUrlState } from "./useUrlState";
 import type { TitleDetail } from "../types";
 
 export function useSelectedTitle() {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const { titleId: selectedId, push } = useUrlState();
   const qc = useQueryClient();
 
   const { data: selected, isLoading } = useQuery<TitleDetail>({
@@ -14,10 +15,10 @@ export function useSelectedTitle() {
   });
 
   const select = useCallback((id: string) => {
-    setSelectedId(prev => prev === id ? null : id);
-  }, []);
+    push({ titleId: selectedId === id ? null : id });
+  }, [push, selectedId]);
 
-  const close = useCallback(() => setSelectedId(null), []);
+  const close = useCallback(() => push({ titleId: null }), [push]);
 
   const refresh = useCallback(() => {
     if (selectedId) qc.invalidateQueries({ queryKey: ["title-detail", selectedId] });

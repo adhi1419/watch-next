@@ -17,6 +17,17 @@
 }
 
 @layer base {
+  /* Z-index ladder — single source of truth for layering.
+     Higher = paints on top. Never use raw z-values in components. */
+  :root {
+    --z-topbar: 100;        /* sticky top navigation */
+    --z-panel-desktop: 100; /* detail panel as desktop side rail (below topbar via offset) */
+    --z-panel: 200;         /* detail panel as mobile full-screen layer */
+    --z-dock: 250;          /* mobile bottom nav — global chrome, stays above panel */
+    --z-dropdown: 300;      /* menus/popovers (filters, user menu) */
+    --z-overlay: 400;       /* full-screen takeovers (mobile search) — topmost */
+  }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     background: var(--color-bg);

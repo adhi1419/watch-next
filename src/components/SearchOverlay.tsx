@@ -27,7 +27,7 @@ export function SearchOverlay({ onClose, onSearch, sortBy, onSortChange, genres,
   useEffect(() => { inputRef.current?.focus(); }, []);
 
   return (
-    <div className="fixed inset-0 z-300 bg-[var(--color-bg)] flex flex-col">
+    <div className="fixed inset-0 z-(--z-overlay) bg-[var(--color-bg)] flex flex-col">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-white/8">
         <input
           ref={inputRef}

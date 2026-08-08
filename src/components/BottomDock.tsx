@@ -1,6 +1,6 @@
-import { Tv, Film, Search, Clock } from "lucide-react";
+import { Tv, Film, Search } from "lucide-react";
 
-export type DockTab = "discover-show" | "discover-movie" | "search" | "history";
+export type DockTab = "discover-show" | "discover-movie" | "search";
 
 interface BottomDockProps {
   activeTab: DockTab;
@@ -12,11 +12,10 @@ export function BottomDock({ activeTab, onNavigate }: BottomDockProps) {
     { id: "discover-show", label: "TV Shows", icon: Tv },
     { id: "discover-movie", label: "Movies", icon: Film },
     { id: "search", label: "Search", icon: Search },
-    { id: "history", label: "History", icon: Clock },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-200 flex items-center justify-around h-14 bg-[rgba(20,20,20,0.95)] backdrop-blur-[16px] border-t border-white/8 pb-[env(safe-area-inset-bottom)]">
+    <nav className="fixed bottom-0 left-0 right-0 z-(--z-dock) flex items-center justify-around h-14 bg-[rgba(20,20,20,0.95)] backdrop-blur-[16px] border-t border-white/8 pb-[env(safe-area-inset-bottom)]">
       {tabs.map(({ id, label, icon: Icon }) => (
         <button
           key={id}

@@ -24,6 +24,16 @@ export default function App() {
   );
 }
 
+function ViewPill({ view, onChange }: { view: string; onChange: (v: "discover" | "history") => void }) {
+  return (
+    <div className="relative inline-flex pointer-events-auto backdrop-blur-[24px] backdrop-saturate-[1.8] bg-white/[0.07] border-2 border-white/25 rounded-full p-[3px] shadow-[0_4px_24px_rgba(0,0,0,0.5)]">
+      <div className={`absolute top-[3px] bottom-[3px] w-[calc(50%-3px)] bg-[var(--color-accent)] rounded-full transition-transform duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] ${view === "history" ? "translate-x-[calc(100%+2px)]" : "translate-x-[2px]"}`} />
+      <button className={`relative z-1 px-6 py-1.5 border-none bg-transparent text-[0.9rem] font-bold cursor-pointer rounded-full transition-colors ${view === "discover" ? "text-white" : "text-white/60"}`} onClick={() => onChange("discover")}>Discover</button>
+      <button className={`relative z-1 px-6 py-1.5 border-none bg-transparent text-[0.9rem] font-bold cursor-pointer rounded-full transition-colors ${view === "history" ? "text-white" : "text-white/60"}`} onClick={() => onChange("history")}>History</button>
+    </div>
+  );
+}
+
 function AppShell({ user, onSignOut }: { user: any; onSignOut: () => void }) {
   const { view, filterType, sort, genres, push } = useUrlState();
   const [showFilters, setShowFilters] = useState(false);
@@ -52,16 +62,14 @@ function AppShell({ user, onSignOut }: { user: any; onSignOut: () => void }) {
   const handleDockNavigate = (tab: DockTab) => {
     if (tab === "search") {
       setShowSearchOverlay(true);
-    } else if (tab === "history") {
-      push({ view: "history" });
     } else if (tab === "discover-show") {
-      push({ view: "discover", filterType: "SHOW" });
+      push({ filterType: "SHOW" });
     } else if (tab === "discover-movie") {
-      push({ view: "discover", filterType: "MOVIE" });
+      push({ filterType: "MOVIE" });
     }
   };
 
-  const activeDockTab: DockTab = showSearchOverlay ? "search" : view === "history" ? "history" : filterType === "MOVIE" ? "discover-movie" : "discover-show";
+  const activeDockTab: DockTab = showSearchOverlay ? "search" : filterType === "MOVIE" ? "discover-movie" : "discover-show";
 
   useEffect(() => {
     if (!showFilters) return;
@@ -84,10 +92,15 @@ function AppShell({ user, onSignOut }: { user: any; onSignOut: () => void }) {
   return (
     <div className="flex flex-col h-screen">
       {/* Top Bar */}
-      <nav className="sticky top-0 z-100 flex items-center justify-between px-4 md:px-6 h-[var(--spacing-topbar)] bg-[rgba(30,30,30,0.7)] backdrop-blur-[16px] border-b border-white/8 w-full">
+      <nav className="sticky top-0 z-(--z-topbar) flex items-center justify-between px-4 md:px-6 h-[var(--spacing-topbar)] bg-[rgba(30,30,30,0.7)] backdrop-blur-[16px] border-b border-white/8 w-full">
         <a onClick={() => { push({ view: "discover", filterType: "SHOW" }); setSearch(""); setActiveActor(null); setShowSearchOverlay(false); }} className="shrink-0 cursor-pointer">
           <svg width="32" height="32" viewBox="0 0 64 64" fill="none"><rect width="64" height="64" rx="14" fill="#1a1a1a"/><path d="M16 8h32a4 4 0 0 1 4 4v44l-20-12-20 12V12a4 4 0 0 1 4-4z" fill="#e50914" opacity="0.9"/><polygon points="26,22 26,42 44,32" fill="white"/></svg>
         </a>
+
+        {/* Mobile center: Discover/History pill (desktop shows search instead) */}
+        <div className="flex md:hidden flex-1 justify-center">
+          <ViewPill view={view} onChange={(v) => push({ view: v })} />
+        </div>
 
         {/* Desktop center: search + toggle (hidden on mobile) */}
         <div className="hidden md:flex flex-1 min-w-0 items-center justify-center gap-3" data-testid="topbar-center">
@@ -108,7 +121,7 @@ function AppShell({ user, onSignOut }: { user: any; onSignOut: () => void }) {
               </button>
             )}
             {showFilters && (
-              <div className="absolute top-[calc(100%+8px)] right-0 bg-[rgba(30,30,30,0.85)] backdrop-blur-[16px] border border-white/10 rounded-xl p-3 flex flex-col gap-2 z-200 min-w-40">
+              <div className="absolute top-[calc(100%+8px)] right-0 bg-[rgba(30,30,30,0.85)] backdrop-blur-[16px] border border-white/10 rounded-xl p-3 flex flex-col gap-2 z-(--z-dropdown) min-w-40">
                 <label className="text-xs uppercase text-[var(--color-muted)]">Sort</label>
                 <select value={sort} onChange={(e) => push({ sort: e.target.value })} className="px-2 py-1.5 rounded-lg border border-[#333] bg-[var(--color-bg)] text-[var(--color-text)] text-sm">
                   <option value="IMDB_SCORE">IMDb Rating</option>
@@ -140,7 +153,7 @@ function AppShell({ user, onSignOut }: { user: any; onSignOut: () => void }) {
             {user.photoURL ? <img src={user.photoURL} alt="" className="w-8 h-8 rounded-full hover:ring-2 hover:ring-white/20 transition-all" /> : <div className="w-8 h-8 rounded-full bg-[var(--color-accent)] flex items-center justify-center text-white text-sm font-bold">{(user.email?.[0] || "?").toUpperCase()}</div>}
           </button>
           {showUserMenu && (
-            <div className="absolute top-full right-0 mt-2 bg-[rgba(30,30,30,0.95)] backdrop-blur-[16px] border border-white/10 rounded-xl p-1 min-w-36 z-200">
+            <div className="absolute top-full right-0 mt-2 bg-[rgba(30,30,30,0.95)] backdrop-blur-[16px] border border-white/10 rounded-xl p-1 min-w-36 z-(--z-dropdown)">
               <div className="px-3 py-2 text-xs text-[var(--color-muted)] border-b border-white/8">{user.email}</div>
               <button onClick={onSignOut} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--color-text)] bg-transparent border-none cursor-pointer rounded-lg hover:bg-white/5 transition-colors">
                 <LogOut size={14} /> Sign out
@@ -152,13 +165,9 @@ function AppShell({ user, onSignOut }: { user: any; onSignOut: () => void }) {
 
       {/* Main Content */}
       <main className={`main-scroll flex-1 overflow-y-auto ${isMobile ? "pb-16" : "pb-6"}`}>
-        {/* View Tabs (floating pill) */}
-        <div className="sticky top-0 z-50 flex justify-center py-2 px-4 -mb-[44px] pointer-events-none">
-          <div className="relative inline-flex pointer-events-auto backdrop-blur-[24px] backdrop-saturate-[1.8] bg-white/[0.07] border-2 border-white/25 rounded-full p-[3px] shadow-[0_4px_24px_rgba(0,0,0,0.5)]">
-            <div className={`absolute top-[3px] bottom-[3px] w-[calc(50%-3px)] bg-[var(--color-accent)] rounded-full transition-transform duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] ${view === "history" ? "translate-x-[calc(100%+2px)]" : "translate-x-[2px]"}`} />
-            <button className={`relative z-1 px-6 py-1.5 border-none bg-transparent text-[0.9rem] font-bold cursor-pointer rounded-full transition-colors ${view === "discover" ? "text-white" : "text-white/60"}`} onClick={() => push({ view: "discover" })}>Discover</button>
-            <button className={`relative z-1 px-6 py-1.5 border-none bg-transparent text-[0.9rem] font-bold cursor-pointer rounded-full transition-colors ${view === "history" ? "text-white" : "text-white/60"}`} onClick={() => push({ view: "history" })}>History</button>
-          </div>
+        {/* View Tabs (floating pill — desktop only; mobile has it in the topbar) */}
+        <div className="hidden md:flex sticky top-0 z-50 justify-center py-2 px-4 -mb-[44px] pointer-events-none">
+          <ViewPill view={view} onChange={(v) => push({ view: v })} />
         </div>
 
         {view === "discover" && (
@@ -185,7 +194,7 @@ function AppShell({ user, onSignOut }: { user: any; onSignOut: () => void }) {
           loading={overlayResults.loading}
           hasMore={overlayResults.hasMore}
           onLoadMore={overlayResults.loadMore}
-          onSelectTitle={(t) => { setShowSearchOverlay(false); setMobileSearch(""); push({ view: "discover", filterType: t.type }); }}
+          onSelectTitle={(t) => { setShowSearchOverlay(false); setMobileSearch(""); push({ view: "discover", filterType: t.type, titleId: t.id }); }}
         />
       )}
     </div>

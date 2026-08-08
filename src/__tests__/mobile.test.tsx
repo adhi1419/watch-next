@@ -6,7 +6,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 describe("Mobile Support", () => {
   describe("BottomDock", () => {
-    it("renders 4 navigation tabs", async () => {
+    it("renders 3 navigation tabs", async () => {
       const { BottomDock } = await import("../components/BottomDock");
       const onNavigate = vi.fn();
       render(<BottomDock activeTab="discover-show" onNavigate={onNavigate} />);
@@ -14,7 +14,7 @@ describe("Mobile Support", () => {
       expect(screen.getByLabelText("TV Shows")).toBeInTheDocument();
       expect(screen.getByLabelText("Movies")).toBeInTheDocument();
       expect(screen.getByLabelText("Search")).toBeInTheDocument();
-      expect(screen.getByLabelText("History")).toBeInTheDocument();
+      expect(screen.queryByLabelText("History")).not.toBeInTheDocument();
     });
 
     it("highlights active tab", async () => {
@@ -33,8 +33,8 @@ describe("Mobile Support", () => {
       fireEvent.click(screen.getByLabelText("Movies"));
       expect(onNavigate).toHaveBeenCalledWith("discover-movie");
 
-      fireEvent.click(screen.getByLabelText("History"));
-      expect(onNavigate).toHaveBeenCalledWith("history");
+      fireEvent.click(screen.getByLabelText("Search"));
+      expect(onNavigate).toHaveBeenCalledWith("search");
     });
   });
 
