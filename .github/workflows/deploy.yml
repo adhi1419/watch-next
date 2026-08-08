@@ -79,5 +79,8 @@ jobs:
             --region=${{ env.REGION }} \
             --project=${{ env.PROJECT_ID }} \
             --allow-unauthenticated \
-            --min-instances=1 \
+            --min-instances=0 \
+            --max-instances=1 \
+            --memory=256Mi \
+            --cpu=1 \
             --set-env-vars=NODE_ENV=production,ALLOWED_ORIGINS=https://adhi1419.github.io
