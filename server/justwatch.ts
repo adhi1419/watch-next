@@ -94,23 +94,35 @@ export async function fetchTitlesMeta(ids: string[]): Promise<Map<string, TitleM
   }
 
   if (uncached.length > 0) {
-    try {
-      const resp = await fetch(GQL_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: NODES_QUERY, variables: { ids: uncached, country: COUNTRY, packages: PACKAGE_CODES } }),
-      });
-      if (resp.ok) {
+    // JustWatch nodes() enforces a page-size limit (~100 IDs -> "page too large" TOO_BIG)
+    // and a query complexity budget (350K -> exceeded at ~200 IDs with this field set).
+    // Both fail with HTTP 200 + data.nodes=null, so we must chunk AND check json.errors.
+    const CHUNK = 40;
+    for (let i = 0; i < uncached.length; i += CHUNK) {
+      const chunk = uncached.slice(i, i + CHUNK);
+      try {
+        const resp = await fetch(GQL_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: NODES_QUERY, variables: { ids: chunk, country: COUNTRY, packages: PACKAGE_CODES } }),
+        });
+        if (!resp.ok) {
+          console.error(`[justwatch] nodes fetch HTTP ${resp.status} for chunk of ${chunk.length}`);
+          continue;
+        }
         const json = await resp.json();
+        if (json?.errors?.length) {
+          console.error("[justwatch] nodes query errors:", JSON.stringify(json.errors).slice(0, 300));
+        }
         for (const node of json?.data?.nodes ?? []) {
           if (!node) continue;
           const meta = parseNode(node);
           result.set(meta.id, meta);
           cache.set(meta.id, { data: meta, expires: now + TTL });
         }
+      } catch (e) {
+        console.error("[justwatch] batch fetch failed:", e);
       }
-    } catch (e) {
-      console.error("[justwatch] batch fetch failed:", e);
     }
   }
   return result;
