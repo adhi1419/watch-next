@@ -32,3 +32,18 @@ watched.db
 
 # GCP credentials
 service-account.json
+
+# Build artifacts
+*.tsbuildinfo
+
+# Local tooling
+.kiro/settings/
+mise.toml
+
+# Import data snapshots (personal viewing data — never commit)
+scripts/firestore-history.json
+scripts/firestore-names.json
+scripts/netflix-import-ids.json
+scripts/netflix-import-matches.json
+scripts/netflix-movies-ids.json
+scripts/netflix-standups-ids.json
